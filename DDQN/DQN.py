@@ -85,18 +85,30 @@ class DQN:
         self.inputscaled = self.input/255
         
         # Convolutional layers
-        self.conv1 = tf.layers.conv2d(
-            inputs=self.inputscaled, filters=32, kernel_size=[8, 8], strides=4,
-            kernel_initializer=tf.variance_scaling_initializer(scale=2),
-            padding="valid", activation=tf.nn.relu, use_bias=False, name='conv1')
-        self.conv2 = tf.layers.conv2d(
-            inputs=self.conv1, filters=64, kernel_size=[4, 4], strides=2, 
-            kernel_initializer=tf.variance_scaling_initializer(scale=2),
-            padding="valid", activation=tf.nn.relu, use_bias=False, name='conv2')
-        self.conv3 = tf.layers.conv2d(
-            inputs=self.conv2, filters=64, kernel_size=[3, 3], strides=1, 
-            kernel_initializer=tf.variance_scaling_initializer(scale=2),
-            padding="valid", activation=tf.nn.relu, use_bias=False, name='conv3')
+        model = Sequential()
+        model.add(Convolution2D(32, 8, 8, subsample=(4, 4), activation='relu', input_shape=(STATE_LENGTH, FRAME_WIDTH, FRAME_HEIGHT))) #subsample=strides
+        model.add(Convolution2D(64, 4, 4, subsample=(2, 2), activation='relu'))
+        model.add(Convolution2D(64, 3, 3, subsample=(1, 1), activation='relu'))
+        model.add(Flatten())
+        model.add(Dense(512, activation='relu'))
+        model.add(Dense(self.num_actions))
+        
+        model.summary()
+
+        #self.conv1 = tf.layers.conv2d(
+        #    inputs=self.inputscaled, filters=32, kernel_size=[8, 8], strides=4,
+        #    kernel_initializer=tf.variance_scaling_initializer(scale=2),
+        #    padding="valid", activation=tf.nn.relu, use_bias=False, name='conv1')
+        #self.conv2 = tf.layers.conv2d(
+        #    inputs=self.conv1, filters=64, kernel_size=[4, 4], strides=2, 
+        #    kernel_initializer=tf.variance_scaling_initializer(scale=2),
+        #    padding="valid", activation=tf.nn.relu, use_bias=False, name='conv2')
+        #self.conv3 = tf.layers.conv2d(
+        #    inputs=self.conv2, filters=64, kernel_size=[3, 3], strides=1, 
+        #    kernel_initializer=tf.variance_scaling_initializer(scale=2),
+        #    padding="valid", activation=tf.nn.relu, use_bias=False, name='conv3')
+
+
         self.conv4 = tf.layers.conv2d(
             inputs=self.conv3, filters=hidden, kernel_size=[7, 7], strides=1, 
             kernel_initializer=tf.variance_scaling_initializer(scale=2),
