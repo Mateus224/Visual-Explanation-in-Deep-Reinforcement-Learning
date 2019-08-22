@@ -4,4 +4,4 @@ This is the first algorithm which visualizes the knowledge of an agent trained b
 
 This code will include in the futer not only make visual explanation through backpropagation but also through grad CAM.
 
-For now we will compare how good we can visualize DQN and dueling double DQN Algorithmes. As environment we will use the ATARI Game.
+For now we will compare how good we can visualize DQN and dueling double DQN Algorithmes. As environment we will use ATARI Game.
