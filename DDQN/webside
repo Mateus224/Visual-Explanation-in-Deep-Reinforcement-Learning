@@ -4,3 +4,9 @@ https://towardsdatascience.com/tutorial-double-deep-q-learning-with-dueling-netw
 
 keras duelling double dqn
 https://github.com/p-Mart/Double-Dueling-DQN-Keras/blob/master/DDDQN.py
+
+
+
+dueling explanation:
+https://datascience.stackexchange.com/questions/34074/dueling-dqn-cant-understand-its-mechanism
+https://datascience.stackexchange.com/questions/37926/dueling-dqn-why-should-we-decompose-and-then-combine-them-back-into

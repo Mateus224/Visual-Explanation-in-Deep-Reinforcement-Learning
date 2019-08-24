@@ -22,6 +22,13 @@ import numpy as np
 import imageio
 from skimage.transform import resize
 
+from keras.models import Model
+from keras.layers import Input, Dense, Lambda
+from keras.layers.convolutional import Conv2D
+from keras import backend as K
+from keras.engine.topology import Layer
+from keras.layers.merge import _Merge, Multiply
+
 
 
 class ProcessFrame:
@@ -85,15 +92,30 @@ class DQN:
         self.inputscaled = self.input/255
         
         # Convolutional layers
-        model = Sequential()
-        model.add(Convolution2D(32, 8, 8, subsample=(4, 4), activation='relu', input_shape=(STATE_LENGTH, FRAME_WIDTH, FRAME_HEIGHT))) #subsample=strides
-        model.add(Convolution2D(64, 4, 4, subsample=(2, 2), activation='relu'))
-        model.add(Convolution2D(64, 3, 3, subsample=(1, 1), activation='relu'))
-        model.add(Flatten())
-        model.add(Dense(512, activation='relu'))
-        model.add(Dense(self.num_actions))
-        
-        model.summary()
+
+
+        net = Conv2D(filters=32, kernel_size=[8,8], strides=[4,4], input_shape=(84, 84, 3))(self.inputscaled)
+        net = Conv2D(filters=64, kernel_size=[4,4],strides=[2,2])(net)
+        net = Conv2D(filters=64, kernel_size=[3,3],strides=[1,1])(net)
+        net = Conv2D(filters=h_size, kernel_size=[7,7],strides=[1,1])(net)
+
+        net_value = Lambda(lambda x: x[:,:,:,:h_size//2])(net)
+        net_advantage = Lambda(lambda x: x[:,:,:,h_size//2:])(net)
+
+        #Process spliced data stream into value and advantage function
+        value = Dense(env.actions, activation="linear")(net_value)
+        advantage = Dense(env.actions, activation="linear")(net_advantage)
+
+        #Recombine value and advantage layers into Q layer
+        q = QLayer()([value, advantage])
+
+        self.q_out = Multiply()([q, self.actions_onehot])
+        self.q_out = Lambda(lambda x: K.cumsum(x, axis=3), output_shape=(1,))(self.q_out)
+        #need to figure out how to represent actions within training
+        self.model = Model(inputs=[self.inputs, self.actions], outputs=[q, self.q_out])
+        self.model.compile(optimizer="Adam", loss="mean_squared_error")
+
+        self.model.summary()
 
         #self.conv1 = tf.layers.conv2d(
         #    inputs=self.inputscaled, filters=32, kernel_size=[8, 8], strides=4,
