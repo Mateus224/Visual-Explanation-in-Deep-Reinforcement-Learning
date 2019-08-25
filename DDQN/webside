@@ -10,3 +10,15 @@ https://github.com/p-Mart/Double-Dueling-DQN-Keras/blob/master/DDDQN.py
 dueling explanation:
 https://datascience.stackexchange.com/questions/34074/dueling-dqn-cant-understand-its-mechanism
 https://datascience.stackexchange.com/questions/37926/dueling-dqn-why-should-we-decompose-and-then-combine-them-back-into
+
+
+https://yilundu.github.io/2016/12/24/Deep-Q-Learning-on-Space-Invaders.html
+https://github.com/yilundu/DQN-DDQN-on-Space-Invaders/blob/master/duel_Q.py
+
+
+
+Gradient based
+https://yanpanlau.github.io/2016/10/11/Torcs-Keras.html
+
+Backpropagation:
+https://medium.com/@erikhallstrm/backpropagation-from-the-beginning-77356edf427d
