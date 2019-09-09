@@ -18,7 +18,6 @@ from keras.layers import merge, Input
 from keras import backend as K
 import matplotlib.pyplot as plt
 from keras.callbacks import CSVLogger
-loss=huber_loss
 
 
 ENV_NAME = 'BreakoutDeterministic-v4'  # Environment name
@@ -27,7 +26,7 @@ FRAME_HEIGHT = 84  # Resized frame height
 NUM_EPISODES = 40000  # Number of episodes the agent plays
 STATE_LENGTH = 4  # Number of most recent frames to produce the input to the network
 GAMMA = 0.99  # Discount factor
-EXPLORATION_STEPS =1000000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
+EXPLORATION_STEPS =800000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
 INITIAL_EPSILON = 1.0  # Initial value of epsilon in epsilon-greedy
 FINAL_EPSILON = 0.1  # Final value of epsilon in epsilon-greedy
 INITIAL_REPLAY_SIZE = 50000  # Number of steps to populate the replay memory before training starts
@@ -117,10 +116,14 @@ class Agent():
         value = Dense(1, name='denseValue' )(fc2)
         #policy = merge([advantage, value], mode = lambda x: x[0]-K.mean(x[0])+x[1], output_shape = (self.n_actions,))
         self.q_values = merge([advantage, value], name='merge', mode = lambda x: x[0]-K.mean(x[0])+x[1], output_shape = (self.num_actions,))
-        best_action = tf.argmax(self.q_values, 1)
+        #best_action = tf.argmax(self.q_values, 1)
+
+
+         #select_q_value_of_action = merge([q_value_prediction,action_one_hot], mode="mul")
+        #target_q_value = Lambda(lambda x:K.sum(x, axis=-1, keepdims=True),output_shape=lambda_out_shape)(select_q_value_of_action)
 
         model = Model(input=[input_layer], output=[self.q_values])
-        model.compile(loss=huber_loss, optimizer=Adam(lr=0.00001)) #0.0000625 #0.000001#loss=huber_loss, loss='mse'
+        model.compile(loss='mse', optimizer=Adam(lr=0.00001)) #0.0000625 #0.000001#loss=huber_loss, loss='mse'
 
 
         print("Successfully constructed networks.")
@@ -132,20 +135,20 @@ class Agent():
 
         return model
 
-    def huber_loss(a, b, in_keras=True):
-        error = a - b
-        quadratic_term = error*error / 2
-        linear_term = abs(error) - 1/2
-        use_linear_term = (abs(error) > 1.0)
-    if in_keras:
+    #def huber_loss(a, b, in_keras=True):
+    #    error = a - b
+    #    quadratic_term = error*error / 2
+    #    linear_term = abs(error) - 1/2
+    #    use_linear_term = (abs(error) > 1.0)
+    #if in_keras:
         # Keras won't let us multiply floats by booleans, so we explicitly cast the booleans to floats
-        use_linear_term = K.cast(use_linear_term, 'float32')
-    return use_linear_term * linear_term + (1-use_linear_term) * quadratic_term
+    #    use_linear_term = K.cast(use_linear_term, 'float32')
+    #return use_linear_term * linear_term + (1-use_linear_term) * quadratic_term
 
 
     def get_initial_state(self, observation, last_observation):
-        processed_observation = np.maximum(observation, last_observation)
-        processed_observation = np.uint8(resize(rgb2gray(processed_observation), (FRAME_WIDTH, FRAME_HEIGHT)) * 255)
+        #processed_observation = np.maximum(observation, last_observation)
+        processed_observation = np.uint8(resize(rgb2gray(observation), (FRAME_WIDTH, FRAME_HEIGHT)) * 255)
         
         state = [processed_observation for _ in range(STATE_LENGTH)]
         
@@ -164,13 +167,14 @@ class Agent():
 
         return action
 
-    def run(self, state, action, reward, terminal, observation):
+    def run(self, state, action, reward, terminal, next_state):
         #print(observation.shape, state.shape)
-        next_state = np.append(state[1:, :, :], observation, axis=0)
+        next_state = np.append(state[1:, :, :], next_state, axis=0)
         
 
         # Clip all positive rewards at 1 and all negative rewards at -1, leaving 0 rewards unchanged
         reward = np.clip(reward, -1, 1)
+        #print(reward,"\n")
 
         # Store transition in replay memory
         self.replay_memory.append((state, action, reward, next_state, terminal))
@@ -294,7 +298,7 @@ class Agent():
     def get_action_at_test(self, state):
         if random.random() <= 0.05:
             state=np.expand_dims(state, axis=0)
-            action = np.argmax(self.q_network.predict(state/255.0))
+            action = random.randrange(self.num_actions)
         else:
             #print(np.float32(state / 255.0))
             #action = np.argmax(self.q_values.eval(feed_dict={self.s: [np.float32(state / 255.0)]}))
@@ -324,15 +328,14 @@ def main():
                 last_observation = observation
                 observation, _, _, _ = env.step(1)  # Do nothing
             state = agent.get_initial_state(observation, last_observation)
-            while True:
-                last_observation = observation
-                action = agent.get_action(state)
+            while not terminal:
+                last_state = state
+                action = agent.get_action(last_state)
                 observation, reward, terminal, _ = env.step(action)
                 # env.render()
-                processed_observation = preprocess(observation, last_observation)
-                state = agent.run(state, action, reward, terminal, processed_observation)
-                if terminal:
-                    break
+                state = preprocess(observation, last_observation)
+                state = agent.run(last_state, action, reward, terminal, state)
+
     else:  # Test mode
         # env.monitor.start(ENV_NAME + '-test')
         for _ in range(NUM_EPISODES_AT_TEST):
@@ -340,7 +343,7 @@ def main():
             observation = env.reset()
             for _ in range(random.randint(1, NO_OP_STEPS)):
                 last_observation = observation
-                observation, _, _, _ = env.step(1)  # Do nothing
+                observation, _, _, _ = env.step(0)  # Do nothing
             state = agent.get_initial_state(observation, last_observation)
             while not terminal:
                 last_observation = observation
