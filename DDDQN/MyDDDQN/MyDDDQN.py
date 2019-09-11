@@ -18,6 +18,7 @@ from keras.layers import merge, Input
 from keras import backend as K
 import matplotlib.pyplot as plt
 from keras.callbacks import CSVLogger
+from gym_wrappers import MainGymWrapper
 
 
 ENV_NAME = 'BreakoutDeterministic-v4'  # Environment name
@@ -29,15 +30,15 @@ GAMMA = 0.99  # Discount factor
 EXPLORATION_STEPS =800000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
 INITIAL_EPSILON = 1.0  # Initial value of epsilon in epsilon-greedy
 FINAL_EPSILON = 0.1  # Final value of epsilon in epsilon-greedy
-INITIAL_REPLAY_SIZE = 50000  # Number of steps to populate the replay memory before training starts
-NUM_REPLAY_MEMORY = 500000  # Number of replay memory the agent uses for training
+INITIAL_REPLAY_SIZE = 20000  # Number of steps to populate the replay memory before training starts
+NUM_REPLAY_MEMORY = 110000  # Number of replay memory the agent uses for training
 BATCH_SIZE = 32  # Mini batch size
 TARGET_UPDATE_INTERVAL = 10000  # The frequency with which the target network is updated
 TRAIN_INTERVAL = 4  # The agent selects 4 actions between successive updates
 MOMENTUM = 0.95  # Momentum used by RMSProp
 MIN_GRAD = 0.01  # Constant added to the squared gradient in the denominator of the RMSProp update
-SAVE_INTERVAL = 100000  # The frequency with which the network is saved
-NO_OP_STEPS = 25  # Maximum number of "do nothing" actions to be performed by the agent at the start of an episode
+SAVE_INTERVAL = 20000  # The frequency with which the network is saved
+NO_OP_STEPS = 15  # Maximum number of "do nothing" actions to be performed by the agent at the start of an episode
 LOAD_NETWORK = False
 TRAIN = True
 SAVE_NETWORK_PATH = 'saved_networks/' + ENV_NAME
@@ -208,7 +209,7 @@ class Agent():
         self.total_reward += reward
         #self.total_q_max += np.max(self.q_values.eval(feed_dict={self.s: [np.float32(state / 255.0)]}))
         state=np.expand_dims(state, axis=0)
-        self.total_q_max +=np.max(self.q_network.predict(np.float32(state/255.0)))
+        self.total_q_max +=np.max(self.q_network.predict(np.float32(state)/255.0))
         self.duration += 1
 
         if terminal:
@@ -273,7 +274,7 @@ class Agent():
         #print(target_q_values,"test\n")
         #print(np.array(state_batch).shape,"\n shape\n")
         csv_logger = CSVLogger('log.csv', append=True, separator=';')
-        self.q_network.fit(np.array(state_batch), target_q_values, nb_epoch=1, verbose=0, batch_size=32, callbacks=[csv_logger])
+        self.q_network.fit(np.array(state_batch) / 255.0, target_q_values, nb_epoch=1, verbose=0, batch_size=32, callbacks=[csv_logger])
 
 
     def setup_summary(self):
@@ -309,7 +310,7 @@ class Agent():
         return action
 
 
-def preprocess(observation, last_observation):
+def preprocess(observation):
     #processed_observation = np.maximum(observation, last_observation)
     processed_observation = np.uint8(resize(rgb2gray(observation), (FRAME_WIDTH, FRAME_HEIGHT)) * 255)
     return np.reshape(processed_observation, (1, FRAME_WIDTH, FRAME_HEIGHT))
@@ -323,32 +324,32 @@ def main():
     if TRAIN:  # Train mode
         for _ in range(NUM_EPISODES):
             terminal = False
-            observation = env.reset()
+            state = env.reset()
             for _ in range(random.randint(1, NO_OP_STEPS)):
-                last_observation = observation
-                observation, _, _, _ = env.step(1)  # Do nothing
-            state = agent.get_initial_state(observation, last_observation)
+                last_observation = state
+                state, _, _, _ = env.step(1)  # Do nothing
+            state = agent.get_initial_state(state, last_observation)
             while not terminal:
                 last_state = state
                 action = agent.get_action(last_state)
-                observation, reward, terminal, _ = env.step(action)
+                state, reward, terminal, _ = env.step(action)
                 # env.render()
-                state = preprocess(observation, last_observation)
+                state = preprocess(state)
                 state = agent.run(last_state, action, reward, terminal, state)
 
     else:  # Test mode
         # env.monitor.start(ENV_NAME + '-test')
         for _ in range(NUM_EPISODES_AT_TEST):
             terminal = False
-            observation = env.reset()
+            state = env.reset()
             for _ in range(random.randint(1, NO_OP_STEPS)):
                 last_observation = observation
-                observation, _, _, _ = env.step(0)  # Do nothing
-            state = agent.get_initial_state(observation, last_observation)
+                state, _, _, _ = env.step(0)  # Do nothing
+            state = agent.get_initial_state(state)
             while not terminal:
-                last_observation = observation
+                last_state = state
                 action = agent.get_action_at_test(state)
-                observation, _, terminal, _ = env.step(action)
+                state, _, terminal, _ = env.step(action)
                 env.render()
                 processed_observation = preprocess(observation, last_observation)
                 state = np.append(state[1:, :, :], processed_observation, axis=0)
