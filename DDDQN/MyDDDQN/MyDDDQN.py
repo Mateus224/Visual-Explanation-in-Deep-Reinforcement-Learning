@@ -18,7 +18,7 @@ from keras.layers import merge, Input
 from keras import backend as K
 import matplotlib.pyplot as plt
 from keras.callbacks import CSVLogger
-from gym_wrappers import MainGymWrapper
+#from gym_wrappers import MainGymWrapper
 
 
 ENV_NAME = 'BreakoutDeterministic-v4'  # Environment name
@@ -27,19 +27,19 @@ FRAME_HEIGHT = 84  # Resized frame height
 NUM_EPISODES = 40000  # Number of episodes the agent plays
 STATE_LENGTH = 4  # Number of most recent frames to produce the input to the network
 GAMMA = 0.99  # Discount factor
-EXPLORATION_STEPS =800000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
+EXPLORATION_STEPS =1000000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
 INITIAL_EPSILON = 1.0  # Initial value of epsilon in epsilon-greedy
 FINAL_EPSILON = 0.1  # Final value of epsilon in epsilon-greedy
-INITIAL_REPLAY_SIZE = 20000  # Number of steps to populate the replay memory before training starts
-NUM_REPLAY_MEMORY = 110000  # Number of replay memory the agent uses for training
+INITIAL_REPLAY_SIZE = 50000  # Number of steps to populate the replay memory before training starts
+NUM_REPLAY_MEMORY = 550000  # Number of replay memory the agent uses for training
 BATCH_SIZE = 32  # Mini batch size
 TARGET_UPDATE_INTERVAL = 10000  # The frequency with which the target network is updated
 TRAIN_INTERVAL = 4  # The agent selects 4 actions between successive updates
 MOMENTUM = 0.95  # Momentum used by RMSProp
 MIN_GRAD = 0.01  # Constant added to the squared gradient in the denominator of the RMSProp update
-SAVE_INTERVAL = 20000  # The frequency with which the network is saved
+SAVE_INTERVAL = 30000  # The frequency with which the network is saved
 NO_OP_STEPS = 30  # Maximum number of "do nothing" actions to be performed by the agent at the start of an episode
-LOAD_NETWORK = False
+LOAD_NETWORK = True
 TRAIN = True
 SAVE_NETWORK_PATH = 'saved_networks/' + ENV_NAME
 SAVE_SUMMARY_PATH = 'summary/' + ENV_NAME
@@ -109,7 +109,7 @@ class Agent():
         input_layer = Input(shape = ( 4 ,84, 84), name='input')
         conv1 = Convolution2D(32, 8, 8, subsample=(4, 4), activation='relu', name='conv1')(input_layer)
         conv2 = Convolution2D(64, 4, 4, subsample=(2, 2), activation='relu', name='conv2')(conv1)
-        conv3 = Convolution2D(64, 3, 3, activation = 'relu', name='conv3')(conv2)
+        conv3 = Convolution2D(64, 3, 3, subsample=(1, 1),activation = 'relu', name='conv3')(conv2)
         flatten = Flatten(name='flatten1')(conv3)
         fc1 = Dense(512, name='dense1')(flatten)
         advantage = Dense(self.num_actions, name='denseAdvan')(fc1)
@@ -161,7 +161,7 @@ class Agent():
         else:
             #action = np.argmax(self.q_values.eval(feed_dict={self.s: [np.float32(state / 255.0)]}))
             state=np.expand_dims(state, axis=0)
-            action = np.argmax(self.q_network.predict(np.float32(state/255.0)))
+            action = np.argmax(self.q_network.predict(np.float64(state)/255.0))
         # Anneal epsilon linearly over time
         if self.epsilon > FINAL_EPSILON and self.t >= INITIAL_REPLAY_SIZE:
             self.epsilon -= self.epsilon_step
@@ -209,7 +209,7 @@ class Agent():
         self.total_reward += reward
         #self.total_q_max += np.max(self.q_values.eval(feed_dict={self.s: [np.float32(state / 255.0)]}))
         state=np.expand_dims(state, axis=0)
-        self.total_q_max +=np.max(self.q_network.predict(np.float32(state)/255.0))
+        self.total_q_max +=np.max(self.q_network.predict(np.float64(state)/255.0))
         self.duration += 1
 
         if terminal:
@@ -266,15 +266,15 @@ class Agent():
         # Convert True to 1, False to 0
         terminal_batch = np.array(terminal_batch) + 0
 
-        #for state, action, reward, next_state, done in minibatch:
-        target_q_values = self.target_network.predict(np.array(next_state_batch) / 255.0, batch_size=32)
+        #for state, action, reward, next_state, done in minibatch:np.float64(state)/255.0
+        target_q_values = self.target_network.predict(np.float64(np.array(next_state_batch)) / 255.0, batch_size=32)
         #print(target_q_values, "target_q_values\n")
         y_batch = reward_batch + (1 - terminal_batch) * GAMMA * np.max(target_q_values, axis=1)
         target_q_values[0][np.array(action_batch)]=y_batch
         #print(target_q_values,"test\n")
         #print(np.array(state_batch).shape,"\n shape\n")
         csv_logger = CSVLogger('log.csv', append=True, separator=';')
-        self.q_network.fit(np.array(state_batch) / 255.0, target_q_values, nb_epoch=1, verbose=0, batch_size=32, callbacks=[csv_logger])
+        self.q_network.fit(np.float64(np.array(state_batch)) / 255.0, target_q_values, nb_epoch=1, verbose=0, batch_size=32, callbacks=[csv_logger])
 
 
     def setup_summary(self):
@@ -304,7 +304,7 @@ class Agent():
             #print(np.float32(state / 255.0))
             #action = np.argmax(self.q_values.eval(feed_dict={self.s: [np.float32(state / 255.0)]}))
             state=np.expand_dims(state, axis=0)
-            action = np.argmax(self.q_network.predict(state/255.0))
+            action = np.argmax(self.q_network.predict(np.float64(state)/255.0))
         self.t += 1
 
         return action
@@ -336,7 +336,7 @@ def main():
                 last_state = state
                 action = agent.get_action(last_state)
                 state, reward, terminal, _ = env.step(action)
-                env.render()
+                #env.render()
                 state = preprocess(state)
                 state = agent.run(last_state, action, reward, terminal, state)
 
@@ -345,7 +345,7 @@ def main():
         for _ in range(NUM_EPISODES_AT_TEST):
             terminal = False
             state = env.reset()
-            for _ in range(random.randint(4, NO_OP_STEPS)):
+            for _ in range(random.randint(3, NO_OP_STEPS)):
                 last_observation = observation
                 state, _, _, _ = env.step(0)  # Do nothing
                 processed_observation = preprocess(observation)
