@@ -40,7 +40,7 @@ MIN_GRAD = 0.01  # Constant added to the squared gradient in the denominator of 
 SAVE_INTERVAL = 30000  # The frequency with which the network is saved
 NO_OP_STEPS = 30  # Maximum number of "do nothing" actions to be performed by the agent at the start of an episode
 LOAD_NETWORK = True
-TRAIN = True
+TRAIN = False
 SAVE_NETWORK_PATH = 'saved_networks/' + ENV_NAME
 SAVE_SUMMARY_PATH = 'summary/' + ENV_NAME
 NUM_EPISODES_AT_TEST = 80  # Number of episodes the agent plays at test time
@@ -297,7 +297,7 @@ class Agent():
 
 
     def get_action_at_test(self, state):
-        if random.random() <= 0.05:
+        if random.random() <= 0.9:
             state=np.expand_dims(state, axis=0)
             action = random.randrange(self.num_actions)
         else:
@@ -327,11 +327,11 @@ def main():
             state = env.reset()
             state = agent.get_initial_state(state)
             for _ in range(random.randint(3, NO_OP_STEPS)):
-                last_observation = state
+                last_state = state
                 state, _, _, _ = env.step(0)  # Do nothing
                 #env.render()
                 processed_observation = preprocess(state)
-                state = np.append(last_observation[1:, :, :], processed_observation, axis=0)
+                state = np.append(last_state[1:, :, :], processed_observation, axis=0)
             while not terminal:
                 last_state = state
                 action = agent.get_action(last_state)
@@ -345,18 +345,19 @@ def main():
         for _ in range(NUM_EPISODES_AT_TEST):
             terminal = False
             state = env.reset()
+            state = agent.get_initial_state(state)
             for _ in range(random.randint(3, NO_OP_STEPS)):
-                last_observation = observation
+                last_state = state
                 state, _, _, _ = env.step(0)  # Do nothing
-                processed_observation = preprocess(observation)
-                state = np.append(state[1:, :, :], processed_observation, axis=0)
+                processed_observation = preprocess(state)
+                state = np.append(last_state[1:, :, :], processed_observation, axis=0)
             while not terminal:
                 last_state = state
                 action = agent.get_action_at_test(state)
                 state, _, terminal, _ = env.step(action)
                 env.render()
-                processed_observation = preprocess(observation)
-                state = np.append(state[1:, :, :], processed_observation, axis=0)
+                processed_observation = preprocess(state)
+                state = np.append(last_state[1:, :, :], processed_observation, axis=0)
         # env.monitor.close()
 
 
