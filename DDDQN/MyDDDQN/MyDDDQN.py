@@ -27,11 +27,11 @@ FRAME_HEIGHT = 84  # Resized frame height
 NUM_EPISODES = 40000  # Number of episodes the agent plays
 STATE_LENGTH = 4  # Number of most recent frames to produce the input to the network
 GAMMA = 0.99  # Discount factor
-EXPLORATION_STEPS =1000000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
+EXPLORATION_STEPS =500000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
 INITIAL_EPSILON = 1.0  # Initial value of epsilon in epsilon-greedy
 FINAL_EPSILON = 0.1  # Final value of epsilon in epsilon-greedy
-INITIAL_REPLAY_SIZE = 50000  # Number of steps to populate the replay memory before training starts
-NUM_REPLAY_MEMORY = 550000  # Number of replay memory the agent uses for training
+INITIAL_REPLAY_SIZE = 25000  # Number of steps to populate the replay memory before training starts
+NUM_REPLAY_MEMORY = 130000  # Number of replay memory the agent uses for training
 BATCH_SIZE = 32  # Mini batch size
 TARGET_UPDATE_INTERVAL = 10000  # The frequency with which the target network is updated
 TRAIN_INTERVAL = 4  # The agent selects 4 actions between successive updates
@@ -39,8 +39,8 @@ MOMENTUM = 0.95  # Momentum used by RMSProp
 MIN_GRAD = 0.01  # Constant added to the squared gradient in the denominator of the RMSProp update
 SAVE_INTERVAL = 30000  # The frequency with which the network is saved
 NO_OP_STEPS = 30  # Maximum number of "do nothing" actions to be performed by the agent at the start of an episode
-LOAD_NETWORK = True
-TRAIN = False
+LOAD_NETWORK = False
+TRAIN = True
 SAVE_NETWORK_PATH = 'saved_networks/' + ENV_NAME
 SAVE_SUMMARY_PATH = 'summary/' + ENV_NAME
 NUM_EPISODES_AT_TEST = 80  # Number of episodes the agent plays at test time
@@ -111,14 +111,13 @@ class Agent():
         conv2 = Convolution2D(64, 4, 4, subsample=(2, 2), activation='relu', name='conv2')(conv1)
         conv3 = Convolution2D(64, 3, 3, subsample=(1, 1),activation = 'relu', name='conv3')(conv2)
         flatten = Flatten(name='flatten1')(conv3)
-        fc1 = Dense(512, name='dense1')(flatten)
+        fc1 = Dense(512, name='dense1',activation='relu')(flatten)
         advantage = Dense(self.num_actions, name='denseAdvan')(fc1)
-        fc2 = Dense(512, name='densefc2')(flatten)
-        value = Dense(1, name='denseValue' )(fc2)
+        fc2 = Dense(512, name='densefc2',activation='relu')(flatten)
+        value = Dense(1, name='denseValue',activation='relu' )(fc2)
         #policy = merge([advantage, value], mode = lambda x: x[0]-K.mean(x[0])+x[1], output_shape = (self.n_actions,))
         self.q_values = merge([advantage, value], name='merge', mode = lambda x: x[0]-K.mean(x[0])+x[1], output_shape = (self.num_actions,))
         #best_action = tf.argmax(self.q_values, 1)
-
 
          #select_q_value_of_action = merge([q_value_prediction,action_one_hot], mode="mul")
         #target_q_value = Lambda(lambda x:K.sum(x, axis=-1, keepdims=True),output_shape=lambda_out_shape)(select_q_value_of_action)
@@ -268,13 +267,17 @@ class Agent():
 
         #for state, action, reward, next_state, done in minibatch:np.float64(state)/255.0
         target_q_values = self.target_network.predict(np.float64(np.array(next_state_batch)) / 255.0, batch_size=32)
-        #print(target_q_values, "target_q_values\n")
-        y_batch = reward_batch + (1 - terminal_batch) * GAMMA * np.max(target_q_values, axis=1)
-        target_q_values[0][np.array(action_batch)]=y_batch
-        #print(target_q_values,"test\n")
-        #print(np.array(state_batch).shape,"\n shape\n")
+        NewQ_batch =reward_batch+  (1 - terminal_batch) * (GAMMA * np.max(target_q_values, axis=1))
+        #print(NewQ_batch.shape)
+        #target_q_values[0][np.array(action_batch)]=NewQ_batch
+
+        a_one_hot = np.zeros((BATCH_SIZE,self.num_actions))
+        for idx,ac in enumerate(action_batch):
+            a_one_hot[idx,ac] = 1.0
+        #rint(a_one_hot)
+        processed_state_batch=np.float64(np.array(state_batch)) / 255.0
         csv_logger = CSVLogger('log.csv', append=True, separator=';')
-        self.q_network.fit(np.float64(np.array(state_batch)) / 255.0, target_q_values, nb_epoch=1, verbose=0, batch_size=32, callbacks=[csv_logger])
+        self.q_network.fit(processed_state_batch, NewQ_batch[:,None]*a_one_hot, nb_epoch=1, verbose=0, batch_size=32, callbacks=[csv_logger])
 
 
     def setup_summary(self):
