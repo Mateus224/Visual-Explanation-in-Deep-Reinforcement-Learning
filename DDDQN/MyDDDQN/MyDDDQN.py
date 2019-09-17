@@ -24,14 +24,14 @@ from keras.callbacks import CSVLogger
 ENV_NAME = 'BreakoutDeterministic-v4'  # Environment name
 FRAME_WIDTH = 84  # Resized frame width
 FRAME_HEIGHT = 84  # Resized frame height
-NUM_EPISODES = 40000  # Number of episodes the agent plays
+NUM_EPISODES = 25000  # Number of episodes the agent plays
 STATE_LENGTH = 4  # Number of most recent frames to produce the input to the network
 GAMMA = 0.99  # Discount factor
-EXPLORATION_STEPS =500000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
+EXPLORATION_STEPS =1000000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
 INITIAL_EPSILON = 1.0  # Initial value of epsilon in epsilon-greedy
 FINAL_EPSILON = 0.1  # Final value of epsilon in epsilon-greedy
-INITIAL_REPLAY_SIZE = 25000  # Number of steps to populate the replay memory before training starts
-NUM_REPLAY_MEMORY = 130000  # Number of replay memory the agent uses for training
+INITIAL_REPLAY_SIZE = 50000  # Number of steps to populate the replay memory before training starts
+NUM_REPLAY_MEMORY = 550000  # Number of replay memory the agent uses for training
 BATCH_SIZE = 32  # Mini batch size
 TARGET_UPDATE_INTERVAL = 10000  # The frequency with which the target network is updated
 TRAIN_INTERVAL = 4  # The agent selects 4 actions between successive updates
@@ -107,14 +107,14 @@ class Agent():
 
     def build_network(self):
         input_layer = Input(shape = ( 4 ,84, 84), name='input')
-        conv1 = Convolution2D(32, 8, 8, subsample=(4, 4), activation='relu', name='conv1')(input_layer)
-        conv2 = Convolution2D(64, 4, 4, subsample=(2, 2), activation='relu', name='conv2')(conv1)
-        conv3 = Convolution2D(64, 3, 3, subsample=(1, 1),activation = 'relu', name='conv3')(conv2)
+        conv1 = Convolution2D(32, 8, 8, subsample=(4, 4), activation='elu', name='conv1')(input_layer)
+        conv2 = Convolution2D(64, 4, 4, subsample=(2, 2), activation='elu', name='conv2')(conv1)
+        conv3 = Convolution2D(64, 3, 3, subsample=(1, 1),activation = 'elu', name='conv3')(conv2)
         flatten = Flatten(name='flatten1')(conv3)
-        fc1 = Dense(512, name='dense1',activation='relu')(flatten)
+        fc1 = Dense(512, name='densefc1',activation='elu')(flatten)#activation='relu'
         advantage = Dense(self.num_actions, name='denseAdvan')(fc1)
-        fc2 = Dense(512, name='densefc2',activation='relu')(flatten)
-        value = Dense(1, name='denseValue',activation='relu' )(fc2)
+        fc2 = Dense(512, name='densefc2',activation='elu')(flatten)#activation='relu'
+        value = Dense(1, name='denseValue', )(fc2)#activation='relu'
         #policy = merge([advantage, value], mode = lambda x: x[0]-K.mean(x[0])+x[1], output_shape = (self.n_actions,))
         self.q_values = merge([advantage, value], name='merge', mode = lambda x: x[0]-K.mean(x[0])+x[1], output_shape = (self.num_actions,))
         #best_action = tf.argmax(self.q_values, 1)
@@ -267,7 +267,7 @@ class Agent():
 
         #for state, action, reward, next_state, done in minibatch:np.float64(state)/255.0
         target_q_values = self.target_network.predict(np.float64(np.array(next_state_batch)) / 255.0, batch_size=32)
-        NewQ_batch =reward_batch+  (1 - terminal_batch) * (GAMMA * np.max(target_q_values, axis=1))
+        NewQ_batch =  (1 - terminal_batch) * (GAMMA * np.max(target_q_values, axis=1)+reward_batch)
         #print(NewQ_batch.shape)
         #target_q_values[0][np.array(action_batch)]=NewQ_batch
 
