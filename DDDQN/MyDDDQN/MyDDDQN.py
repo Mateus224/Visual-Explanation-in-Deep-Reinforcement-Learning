@@ -24,14 +24,14 @@ from keras.callbacks import CSVLogger
 ENV_NAME = 'BreakoutDeterministic-v4'  # Environment name
 FRAME_WIDTH = 84  # Resized frame width
 FRAME_HEIGHT = 84  # Resized frame height
-NUM_EPISODES = 40000  # Number of episodes the agent plays
+NUM_EPISODES = 20000  # Number of episodes the agent plays
 STATE_LENGTH = 4  # Number of most recent frames to produce the input to the network
 GAMMA = 0.99  # Discount factor
-EXPLORATION_STEPS =500000   # Number of steps over which the initial value of epsilon is linearly annealed to its final value
-INITIAL_EPSILON = 1.0  # Initial value of epsilon in epsilon-greedy
+EXPLORATION_STEPS =1000000  # Number of steps over which the initial value of epsilon is linearly annealed to its final value
+INITIAL_EPSILON = 1.  # Initial value of epsilon in epsilon-greedy
 FINAL_EPSILON = 0.1  # Final value of epsilon in epsilon-greedy
-INITIAL_REPLAY_SIZE = 25000  # Number of steps to populate the replay memory before training starts
-NUM_REPLAY_MEMORY = 130000  # Number of replay memory the agent uses for training
+INITIAL_REPLAY_SIZE = 50000  # Number of steps to populate the replay memory before training starts
+NUM_REPLAY_MEMORY = 135000  # Number of replay memory the agent uses for training
 BATCH_SIZE = 32  # Mini batch size
 TARGET_UPDATE_INTERVAL = 10000  # The frequency with which the target network is updated
 TRAIN_INTERVAL = 4  # The agent selects 4 actions between successive updates
@@ -106,28 +106,17 @@ class Agent():
         
 
     def build_network(self):
-        input_layer = Input(shape = ( 4 ,84, 84), name='input')
-        conv1 = Convolution2D(32, 8, 8, subsample=(4, 4), activation='relu', name='conv1')(input_layer)
-        conv2 = Convolution2D(64, 4, 4, subsample=(2, 2), activation='relu', name='conv2')(conv1)
-        conv3 = Convolution2D(64, 3, 3, subsample=(1, 1),activation = 'relu', name='conv3')(conv2)
-        flatten = Flatten(name='flatten1')(conv3)
-        fc1 = Dense(512, name='dense1',activation='relu')(flatten)
-        advantage = Dense(self.num_actions, name='denseAdvan')(fc1)
-        fc2 = Dense(512, name='densefc2',activation='relu')(flatten)
-        value = Dense(1, name='denseValue',activation='relu' )(fc2)
-        #policy = merge([advantage, value], mode = lambda x: x[0]-K.mean(x[0])+x[1], output_shape = (self.n_actions,))
-        self.q_values = merge([advantage, value], name='merge', mode = lambda x: x[0]-K.mean(x[0])+x[1], output_shape = (self.num_actions,))
-        #best_action = tf.argmax(self.q_values, 1)
-
-         #select_q_value_of_action = merge([q_value_prediction,action_one_hot], mode="mul")
-        #target_q_value = Lambda(lambda x:K.sum(x, axis=-1, keepdims=True),output_shape=lambda_out_shape)(select_q_value_of_action)
-
-        model = Model(input=[input_layer], output=[self.q_values])
-        model.compile(loss='mse', optimizer=Adam(lr=0.00001)) #0.0000625 #0.000001#loss=huber_loss, loss='mse'
+        model = Sequential()
+        model.add(Convolution2D(32, 8, 8, subsample=(4, 4), activation='relu', input_shape=(STATE_LENGTH, FRAME_WIDTH, FRAME_HEIGHT))) #subsample=strides
+        model.add(Convolution2D(64, 4, 4, subsample=(2, 2), activation='relu'))
+        model.add(Convolution2D(64, 3, 3, subsample=(1, 1), activation='relu'))
+        model.add(Flatten())
+        model.add(Dense(512, activation='relu'))
+        model.add(Dense(self.num_actions))
 
 
         print("Successfully constructed networks.")
-
+        model.compile(loss='mse', optimizer=Adam(lr=0.00001))
         model.summary()
 
 
@@ -146,9 +135,9 @@ class Agent():
     #return use_linear_term * linear_term + (1-use_linear_term) * quadratic_term
 
 
-    def get_initial_state(self, observation):
-        #processed_observation = np.maximum(observation, last_observation)
-        processed_observation = np.uint8(resize(rgb2gray(observation), (FRAME_WIDTH, FRAME_HEIGHT)) * 255)
+    def get_initial_state(self, observation, last_observation):
+        processed_observation = np.maximum(observation, last_observation)
+        processed_observation = np.uint8(resize(rgb2gray(processed_observation), (FRAME_WIDTH, FRAME_HEIGHT)) * 255)
         
         state = [processed_observation for _ in range(STATE_LENGTH)]
         
@@ -313,9 +302,9 @@ class Agent():
         return action
 
 
-def preprocess(observation):
-    #processed_observation = np.maximum(observation, last_observation)
-    processed_observation = np.uint8(resize(rgb2gray(observation), (FRAME_WIDTH, FRAME_HEIGHT)) * 255)
+def preprocess(observation, last_observation):
+    processed_observation = np.maximum(observation, last_observation)
+    processed_observation = np.uint8(resize(rgb2gray(processed_observation), (FRAME_WIDTH, FRAME_HEIGHT)) * 255)
     return np.reshape(processed_observation, (1, FRAME_WIDTH, FRAME_HEIGHT))
 
 
@@ -328,39 +317,37 @@ def main():
         for _ in range(NUM_EPISODES):
             terminal = False
             state = env.reset()
-            state = agent.get_initial_state(state)
-            for _ in range(random.randint(3, NO_OP_STEPS)):
+            #state = agent.get_initial_state(state)
+            for _ in range(random.randint(1, NO_OP_STEPS)):
                 last_state = state
                 state, _, _, _ = env.step(0)  # Do nothing
                 #env.render()
-                processed_observation = preprocess(state)
-                state = np.append(last_state[1:, :, :], processed_observation, axis=0)
+                p_state = agent.get_initial_state(state, last_state)
+                #state = np.append(last_state[1:, :, :], processed_observation, axis=0)
             while not terminal:
                 last_state = state
-                action = agent.get_action(last_state)
+                action = agent.get_action(p_state)
                 state, reward, terminal, _ = env.step(action)
                 #env.render()
-                state = preprocess(state)
-                state = agent.run(last_state, action, reward, terminal, state)
+                prozessedObservation = preprocess(state,last_state)
+                p_state = agent.run(p_state, action, reward, terminal, prozessedObservation)
 
     else:  # Test mode
         # env.monitor.start(ENV_NAME + '-test')
         for _ in range(NUM_EPISODES_AT_TEST):
             terminal = False
             state = env.reset()
-            state = agent.get_initial_state(state)
-            for _ in range(random.randint(3, NO_OP_STEPS)):
+            for _ in range(random.randint(1, NO_OP_STEPS)):
                 last_state = state
                 state, _, _, _ = env.step(0)  # Do nothing
-                processed_observation = preprocess(state)
-                state = np.append(last_state[1:, :, :], processed_observation, axis=0)
+                p_state = agent.get_initial_state(state, last_state)
             while not terminal:
                 last_state = state
-                action = agent.get_action_at_test(state)
+                action = agent.get_action_at_test(p_state)
                 state, _, terminal, _ = env.step(action)
                 env.render()
-                processed_observation = preprocess(state)
-                state = np.append(last_state[1:, :, :], processed_observation, axis=0)
+                processed_observation = preprocess(state,last_state)
+                state = np.append(p_state[1:, :, :], processed_observation, axis=0)
         # env.monitor.close()
 
 
