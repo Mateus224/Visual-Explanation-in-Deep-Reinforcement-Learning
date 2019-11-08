@@ -10,6 +10,9 @@ def parse():
     parser.add_argument('--test_dqn', action='store_true', help='whether test DQN')
     parser.add_argument('--video_dir', default=None, help='output video directory')
     parser.add_argument('--do_render', action='store_true', help='whether render environment')
+    parser.add_argument('--GBP', action='store_true', help='visualize what the network learned with Guided backpropagation')
+    parser.add_argument('--GradCAM', action='store_true', help='visualize what the network learned with GradCAM')
+    parser.add_argument('--GBP_GradCAM', action='store_true', help='visualize what the network learned with Guided GradCAM')
     try:
         from argument import add_arguments
         parser = add_arguments(parser)

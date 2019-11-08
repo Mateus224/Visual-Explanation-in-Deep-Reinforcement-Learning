@@ -13,6 +13,7 @@ from keras.layers import Lambda
 
 from keras.backend.tensorflow_backend import set_session
 
+
 #random#.seed(1)
 #np.random#.seed(1)
 tf.reset_default_graph()
@@ -53,6 +54,9 @@ class Agent_DQN(Agent):
         self.ddqn = args.ddqn
         self.dueling = args.dueling
         self.test_path = args.test_path
+        self.gbp = args.gbp
+        self.gradCAM = args.gradCAM
+        self.gbp_GradCAM = args.gbp_GradCAM
 
         if args.optimizer.lower() == 'adam':
             self.opt = Adam(lr=self.learning_rate)
@@ -142,6 +146,12 @@ class Agent_DQN(Agent):
             # Anneal epsilon linearly over time
             if self.epsilon > self.final_epsilon and self.t >= self.initial_replay_size:
                 self.epsilon -= self.epsilon_step
+        if args.gbp or args.gradCAM or args.gbp_GradCAM:
+            if 0.005 >= random.random():
+                action = random.randrange(self.num_actions)
+            else:
+                action = np.argmax(self.q_network.predict([np.expand_dims(observation,axis=0),self.dummy_input])[0])
+
         else:
             if 0.005 >= random.random():
                 action = random.randrange(self.num_actions)

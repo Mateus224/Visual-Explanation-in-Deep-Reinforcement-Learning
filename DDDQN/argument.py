@@ -25,6 +25,16 @@ def add_arguments(parser):
     parser.add_argument('--ddqn', type=bool, default = False, help='Set True to apply Double Q-learning')
     parser.add_argument('--dueling', type=bool, default = False, help='Set True to apply Duelinng Network')
     parser.add_argument('--test_path', type=str, default = 'saved_dqn_networks/breakout_dqn_10000000.h5', help='Model used during testing')
+    parser.add_argument('--optimizer',type=str, default='rmsprop', help='Optimizer (Adam or Rmsp)')
+
+    ######################
+    #Make video arguments#
+    ######################
+    parser.add_argument('-f', '--num_frames', default=100, type=int, help='number of frames in movie')
+    parser.add_argument('-i', '--first_frame', default=0, type=int, help='index of first frame')
+    parser.add_argument('-dpi', '--resolution', default=75, type=int, help='resolution (dpi)')
+    parser.add_argument('-s', '--save_dir', default='./movies/', type=str, help='dir to save agent logs and checkpoints')
+    parser.add_argument('-p', '--prefix', default='default', type=str, help='prefix to help make video name unique')
     #parser.add_argument('--actor_critic',type=bool, default= False, help='Set True to use actor critc model')
     parser.add_argument('--optimizer',type=str, default='rmsprop', help='Optimizer (Adam or Rmsp)')
 
