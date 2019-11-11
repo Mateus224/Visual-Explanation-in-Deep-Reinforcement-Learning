@@ -31,6 +31,14 @@ class Agent(object):
         """
         raise NotImplementedError("Subclasses should implement this!")
 
+def build_network(self):
+    """
+    Return the model of the Network. 
+    E.g. for visualization techniques
+
+    """
+    raise NotImplementedError("Subclasses should implement this!")
+
 
     def init_game_setting(self):
         """

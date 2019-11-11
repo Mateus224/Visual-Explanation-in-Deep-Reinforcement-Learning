@@ -53,10 +53,6 @@ class Agent_DQN(Agent):
         self.exp_name = args.exp_name
         self.ddqn = args.ddqn
         self.dueling = args.dueling
-        self.test_path = args.test_path
-        self.gbp = args.gbp
-        self.gradCAM = args.gradCAM
-        self.gbp_GradCAM = args.gbp_GradCAM
 
         if args.optimizer.lower() == 'adam':
             self.opt = Adam(lr=self.learning_rate)
@@ -146,12 +142,6 @@ class Agent_DQN(Agent):
             # Anneal epsilon linearly over time
             if self.epsilon > self.final_epsilon and self.t >= self.initial_replay_size:
                 self.epsilon -= self.epsilon_step
-        if args.gbp or args.gradCAM or args.gbp_GradCAM:
-            if 0.005 >= random.random():
-                action = random.randrange(self.num_actions)
-            else:
-                action = np.argmax(self.q_network.predict([np.expand_dims(observation,axis=0),self.dummy_input])[0])
-
         else:
             if 0.005 >= random.random():
                 action = random.randrange(self.num_actions)
@@ -190,7 +180,8 @@ class Agent_DQN(Agent):
         
         # MSE loss on target_q_value only
         model.compile(loss=['mse','mse'], loss_weights=[0.0,1.0],optimizer=Adam(lr=0.00001))#self.opt)
-
+        model.summary()
+        
         return model        
 
     def run(self, state, action, reward, terminal, observation):
