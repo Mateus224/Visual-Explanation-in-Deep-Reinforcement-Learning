@@ -1,8 +1,11 @@
 import argparse
 import numpy as np
 from environment import Environment
-import visualization.backpropagatio
-import visualization.grad_cam.py
+import matplotlib.animation as manimation
+import matplotlib.pyplot as plt
+
+from visualization.backpropagation import *
+#import visualization.grad_cam.py
 
 
 def parse():
@@ -22,27 +25,39 @@ def parse():
     return args
 
 
-def make_video():
+def make_movie(args, agent, history, first_frame=0, num_frames=100, prefix='default', resolution=75, save_dir='./movies/', env_name='Breakout-v0'):
+    visualization_network_model = build_guided_model(agent)
+    visualization_network_model.load_weights(args.test_dqn_model_path)
+    movie_title ="{}-{}-{}.mp4".format(prefix, num_frames, env_name.lower())
+    max_ep_len = first_frame + num_frames + 1
     FFMpegWriter = manimation.writers['ffmpeg']
-    metadata = dict(title=movie_title, artist='mateus', comment='atari-video')
+    metadata = dict(title='test', artist='mateus', comment='atari-video')
     writer = FFMpegWriter(fps=8, metadata=metadata)
-    prog = '' ; total_frames = len(history['state'])
-    dim = np.zeros((FRAME_WIDTH,FRAME_HEIGHT))
+    total_frames = len(history['state'])
+    frame_1= np.zeros((84, 84))
     f = plt.figure(figsize=[6, 6*1.3], dpi=resolution)
     with writer.saving(f, save_dir + movie_title, resolution):
         for i in range(num_frames):
             ix = first_frame+i
-            print(ix)
             if ix < total_frames: # prevent loop from trying to process a frame ix greater than rollout length
                 frame = history['state'][ix].copy()
+                frame = np.expand_dims(frame, axis=0)
+                print(ix)
                 action = history['action'][ix].copy()
-                gbp_heatmap = backpropagation.guided_backprop(guided_model,"dense_4", frame)
-                geb_gradCam = grad_cam.grad_cam(model,"dense_2",frame, action) 
-                gbp_heatmap_pic=gbp_heatmap[0][0]
+                gbp_heatmap = guided_backprop(args, visualization_network_model,"dense_10", frame)
+                #print(gbp_heatmap.shape,"headmap")
+                #geb_gradCam = grad_cam.grad_cam(model,"dense_2",frame, action) 
+                gbp_heatmap_pic=gbp_heatmap[0,:,:,0]
+
                 gbp_heatmap_pic-= gbp_heatmap_pic.mean() #
                 gbp_heatmap_pic/= (gbp_heatmap_pic.std() + 1e-5) #
                 gbp_heatmap_pic*= 0.1 #
-                frame=frame[0][0]
+                #print(frame.shape, "jas")
+                frame=frame[0,:,:,0]
+                print(frame.shape)
+                #print(gbp_heatmap_pic.shape, "asdasdasd")
+                #frame_1=frame[:,:,0]
+                #print(frame_1.shape)
 
                 # clip to [0, 1]
                 gbp_heatmap_pic += 0.5
@@ -50,11 +65,12 @@ def make_video():
                 frame=frame/255
                 frame=np.clip(frame,0,1)
                 mixed = np.stack((gbp_heatmap_pic,gbp_heatmap_pic, frame), axis=2) 
-                plt.imshow(mixed) ; 
-                writer.grab_frame() ; f.clear()
+                plt.imshow(mixed) 
+                writer.grab_frame() 
+                f.clear()
 
 
-def test(agent, env, total_episodes=30):
+def test(args, agent, env, total_episodes=30):
     if args.gbp or args.gradCAM or args.gbp_GradCAM:
         history = { 'state': [], 'action': []}
     rewards = []
@@ -75,6 +91,9 @@ def test(agent, env, total_episodes=30):
         rewards.append(episode_reward)
     print('Run %d episodes'%(total_episodes))
     print('Mean:', np.mean(rewards))
+    if args.gbp or args.gradCAM or args.gbp_GradCAM:
+        make_movie(args, agent, history)
+
     return history
 
 

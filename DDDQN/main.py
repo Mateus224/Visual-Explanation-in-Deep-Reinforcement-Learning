@@ -10,9 +10,9 @@ def parse():
     parser.add_argument('--test_dqn', action='store_true', help='whether test DQN')
     parser.add_argument('--video_dir', default=None, help='output video directory')
     parser.add_argument('--do_render', action='store_true', help='whether render environment')
-    parser.add_argument('--GBP', action='store_true', help='visualize what the network learned with Guided backpropagation')
-    parser.add_argument('--GradCAM', action='store_true', help='visualize what the network learned with GradCAM')
-    parser.add_argument('--GBP_GradCAM', action='store_true', help='visualize what the network learned with Guided GradCAM')
+    parser.add_argument('--gbp', action='store_true', help='visualize what the network learned with Guided backpropagation')
+    parser.add_argument('--gradCAM', action='store_true', help='visualize what the network learned with GradCAM')
+    parser.add_argument('--gbp_GradCAM', action='store_true', help='visualize what the network learned with Guided GradCAM')
     try:
         from argument import add_arguments
         parser = add_arguments(parser)
@@ -35,7 +35,8 @@ def run(args):
         env = Environment('BreakoutNoFrameskip-v4', args, atari_wrapper=True, test=True)
         from agent_dir.agent_dqn import Agent_DQN
         agent = Agent_DQN(env, args)
-        test(agent, env, total_episodes=100)
+        test(args, agent, env, total_episodes=5)
+
 
 if __name__ == '__main__':
     args = parse()
