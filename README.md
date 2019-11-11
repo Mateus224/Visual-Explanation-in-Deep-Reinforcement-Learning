@@ -1,4 +1,4 @@
-# Visual-Explanation-in-Deep-Reinforcement-Learning-through-Backpropagation
+# Visual-Explanation-in-Deep-Reinforcement-Learning-through-Guided-Backpropagation-and-GradCam
 This is the first algorithm which visualizes the knowledge of an agent trained by Deep Reinforcement Learning (paper will be published in Februar) using backpropagation. It shows why the agent is performing the action. Which pixels had the biggest influence on the decision of the agent.
 
 
