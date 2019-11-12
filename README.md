@@ -5,3 +5,16 @@ This is the first algorithm which visualizes the knowledge of an agent trained b
 This code will include in the futer not only visual explanation through backpropagation but also through grad CAM.
 
 For now we will compare how good we can visualize DQN and dueling double DQN Algorithmes. As environment we will use ATARI Game and later Doom.
+
+
+If you have a trained dueling agent run:
+
+'''python3 main.py --test_dqn --gbp --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5'''
+
+otherwise train you agent with 
+
+'''python3 main.py --train_dqn --dueling True --ddqn True'''
+
+and you can test how the agent plays with:
+
+'''python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5'''
