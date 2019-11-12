@@ -10,14 +10,15 @@ For now we will compare how good we can visualize DQN and dueling double DQN Alg
 If you have a trained dueling agent run:
 
 ```console
-python3 main.py --test_dqn --gbp --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5```
-
+python3 main.py --test_dqn --gbp --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5
+```
 otherwise train you agent with 
 
 ```console
-python3 main.py --train_dqn --dueling True --ddqn True```
-
+python3 main.py --train_dqn --dueling True --ddqn True
+```
 and you can test how the agent plays with:
 
 ```console
-python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5```
+python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5
+```
