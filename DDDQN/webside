@@ -22,3 +22,10 @@ https://yanpanlau.github.io/2016/10/11/Torcs-Keras.html
 
 Backpropagation:
 https://medium.com/@erikhallstrm/backpropagation-from-the-beginning-77356edf427d
+
+
+Some results:
+You can see that in the dueling Network the advantage part of the Network the agent is focussing more on his position and in the Value part of the Network more on the Rewards.
+
+![Alt text](1.png?raw=true "1")
+![Alt text](2.png?raw=true "2")
