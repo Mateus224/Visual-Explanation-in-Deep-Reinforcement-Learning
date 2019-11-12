@@ -22,3 +22,11 @@ and you can test how the agent plays with:
 ```console
 python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5
 ```
+
+#Some results
+Here you can see how the agent is looking more on his position in the advatage part of the neuronal network and how he is looking more on the reward in the value function part of the network.
+(left value || right advantage)
+
+![Alt text](DDDQN/1.png?raw=true "example 1")
+![Alt text](DDDQN/2.png?raw=true "example 2")
+
