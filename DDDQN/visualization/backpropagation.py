@@ -42,17 +42,15 @@ def build_guided_model(agent):
     with g.gradient_override_map({'Relu': 'GuidedBackProp'}):
         return agent.build_network()
 
-
-def guided_backprop(args, guided_model, layer_name, frame):
-    """Guided Backpropagation method for visualizing input saliency."""
-    if args.dueling:
-        input_imgs = guided_model.input[0] # in dueling DQN we have two inputs take the first 
-    else:
-        input_imgs = guided_model.input
+def init_guided_backprop(guided_model, layer_name):
+    input_imgs = guided_model.input[0]
     layer_output = guided_model.get_layer(layer_name).output
-    #print(frame.shape, input_imgs, layer_output, "imput_images")
     grads = K.gradients(layer_output, input_imgs)[0]
     backprop_fn = K.function([input_imgs, K.learning_phase()], [grads])
+    return backprop_fn
+
+def guided_backprop(frame, backprop_fn):
+    """Guided Backpropagation method for visualizing input saliency."""
     grads_val = backprop_fn([frame, 0])[0]
     return grads_val
 
