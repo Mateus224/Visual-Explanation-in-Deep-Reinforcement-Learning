@@ -39,5 +39,8 @@ def run(args):
 
 
 if __name__ == '__main__':
+    import sys
+    import numpy
+    numpy.set_printoptions(threshold=sys.maxsize)
     args = parse()
     run(args)

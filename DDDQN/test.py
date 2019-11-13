@@ -47,7 +47,7 @@ def make_movie(args, agent, history, first_frame=0, num_frames=1000, prefix='Q_'
     plotColumns = 2
     plotRows = 1
     with writer.saving(fig, save_dir + movie_title, resolution):
-        for i in range(total_frames): #num_frames
+        for i in range(600):#total_frames): #num_frames
             ix = first_frame+i
             if ix < total_frames: # prevent loop from trying to process a frame ix greater than rollout length
                 frame = history['state'][ix].copy()
@@ -77,19 +77,20 @@ def normalization(gbp_heatmap, frame):
     gbp_heatmap_pic-= gbp_heatmap_pic.mean() 
     gbp_heatmap_pic/= (gbp_heatmap_pic.std() + 1e-5) #
     gbp_heatmap_pic*= 0.1 
-    frame=frame[0,:,:,0]
+
+    frame=frame[0,:,:,3]
+    #print(frame)
 
     # clip to [0, 1]
     gbp_heatmap_pic += 0.5
     gbp_heatmap_pic = np.clip(gbp_heatmap_pic, 0, 1)
-    frame=frame/255
     frame=np.clip(frame,0,1)
     mixed = np.stack((gbp_heatmap_pic,gbp_heatmap_pic, gbp_heatmap_pic), axis=2) 
     return mixed
 
 
 
-def test(args, agent, env, total_episodes=2):
+def test(args, agent, env, total_episodes=1):
     if args.gbp or args.gradCAM or args.gbp_GradCAM:
         history = { 'state': [], 'action': []}
     rewards = []
