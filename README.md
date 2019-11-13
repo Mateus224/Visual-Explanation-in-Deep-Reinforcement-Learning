@@ -28,6 +28,8 @@ python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_mod
 # some results
 Here we can see how the agent is looking more on his position (in the advatage part of the neuronal network [right figure] and how he is looking more on the reward in the value function part of the network [left figure].
 (left value || right advantage)
+![Alt text](pictures/4.png?raw=true "example with environment")
 ![Alt text](pictures/1.png?raw=true "example 1")
 ![Alt text](pictures/2.png?raw=true "example 2")
+
 
