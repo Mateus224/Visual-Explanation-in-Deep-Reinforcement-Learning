@@ -1,5 +1,5 @@
 import argparse
-from test import test
+from play_analyse import play_game
 from environment import Environment
 
 
@@ -35,7 +35,7 @@ def run(args):
         env = Environment('BreakoutNoFrameskip-v4', args, atari_wrapper=True, test=True)
         from agent_dir.agent_dqn import Agent_DQN
         agent = Agent_DQN(env, args)
-        test(args, agent, env, total_episodes=2)
+        play_game(args, agent, env, total_episodes=1)
 
 
 if __name__ == '__main__':
