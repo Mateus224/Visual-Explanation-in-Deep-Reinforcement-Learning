@@ -3,13 +3,16 @@ This is the first algorithm which visualizes the knowledge of an agent trained b
 
 
 Deep Reinfocement Learning Algorithms:
-
+[off Policy algorithms:]
 - [X] DQN
 - [x] DDQN
 - [x] Dueling DDQN
 - [ ] LSTM DQN
 - [ ] Bidirectional LSTM DQN
 - [ ] Attention LSTM DQN
+
+[on Policy algorithms:]
+- [ ] Policy Gradient
 - [ ] A3C
 
 Visualization Techniques:
