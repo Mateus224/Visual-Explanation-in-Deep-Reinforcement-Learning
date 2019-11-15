@@ -2,7 +2,27 @@
 This is the first algorithm which visualizes the knowledge of an agent trained by Deep Reinforcement Learning (paper will be published in Februar) using backpropagation. It shows why the agent is performing the action. Which pixels had the biggest influence on the decision of the agent.
 
 
-This code will include in the future not only visual explanation through backpropagation but also through grad CAM.
+Deep Reinfocement Learning Algorithms:
+
+- [X] DQN
+- [x] DDQN
+- [x] Dueling DDQN
+- [ ] LSTM DQN
+- [ ] Bidirectional LSTM DQN
+- [ ] Attention LSTM DQN
+- [ ] A3C
+
+Visualization Techniques:
+
+- [X] Backpropagation
+- [x] Guided Backpropagation
+- [ ] GradCam
+- [ ] Guided GradCam
+- [ ] SmoothGrad
+- [ ] Perturbation-based Saliency Map
+
+
+
 
 For now we will compare how good we can visualize DQN and dueling double DQN Algorithms. As environment we will use ATARI Game and later Doom.
 
