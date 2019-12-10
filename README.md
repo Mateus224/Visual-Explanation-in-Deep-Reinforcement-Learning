@@ -1,10 +1,34 @@
-# Visual-Explanation-in-Deep-Reinforcement-Learning-through-Guided-Backpropagation-and-GradCam
+## Visual-Explanation-in-Deep-Reinforcement-Learning-through-Guided-Backpropagation-and-GradCam
 This is the first algorithm which visualizes the knowledge of an agent trained by Deep Reinforcement Learning (paper will be published in Februar) using backpropagation. It shows why the agent is performing the action. Which pixels had the biggest influence on the decision of the agent.
 
 
-This code will include in the futer not only visual explanation through backpropagation but also through grad CAM.
+# Deep Reinfocement Learning Algorithms:
 
-For now we will compare how good we can visualize DQN and dueling double DQN Algorithmes. As environment we will use ATARI Game and later Doom.
+[off Policy algorithms:]
+- [X] DQN
+- [x] DDQN
+- [x] Dueling DDQN
+- [ ] LSTM DQN
+- [ ] Bidirectional LSTM DQN
+- [ ] Attention LSTM DQN
+
+[on Policy algorithms:]
+- [ ] Policy Gradient
+- [ ] A3C
+
+# Visualization Techniques:
+
+- [X] Backpropagation
+- [x] Guided Backpropagation
+- [ ] GradCam
+- [ ] Guided GradCam
+- [ ] SmoothGrad
+- [ ] Perturbation-based Saliency Map
+
+
+
+
+For now we will compare how good we can visualize DQN and dueling double DQN Algorithms. As environment we will use ATARI Game and later Doom.
 
 
 If you have a trained dueling agent and you want visualize what he learned run:
@@ -26,7 +50,7 @@ python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_mod
 ![Alt text](pictures/DuelingNet.png?raw=true "DQN vs. Dueling DQN Network")
 
 # some results
-Here we can see how the agent is looking more on his position (in the advatage part of the neuronal network [right figure] and how he is looking more on the reward in the value function part of the network [left figure].
+Here we can see how the agent is looking more on his position (in the advantage part of the neuronal network [right figure] and how he is looking more on the reward in the value function part of the network [left figure].
 (left value || right advantage)
 ![Alt text](pictures/4.png?raw=true "example with environment")
 ![Alt text](pictures/1.png?raw=true "example 1")
