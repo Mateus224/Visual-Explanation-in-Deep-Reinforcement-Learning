@@ -3,6 +3,7 @@ import numpy as np
 from environment import Environment
 import matplotlib.animation as manimation
 import matplotlib.pyplot as plt
+from agent_dir.agent_dqn import Agent_DQN
 
 from visualization.backpropagation import *
 #import visualization.grad_cam.py
@@ -106,14 +107,14 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
             writer.grab_frame() 
             fig.clear()
             if i%100==0:
-                print(ix)
+                print(i)
             
 
 
 
 def play_game(args, agent, env, total_episodes=1):
-    if args.gbp or args.gradCAM or args.gbp_GradCAM:
-        history = { 'state': [], 'action': [], 'gradients':[], 'gradients_duel_adv':[],'movie_frames':[]}
+    
+    history = { 'state': [], 'action': [], 'gradients':[], 'gradients_duel_adv':[],'movie_frames':[]}
     rewards = []
     for i in range(total_episodes):
         state = env.reset()
@@ -123,7 +124,7 @@ def play_game(args, agent, env, total_episodes=1):
 
         #playing one game
         #while(not done):
-        for _ in range(600):
+        for _ in range(800):
             action = agent.make_action(state, test=True)
             state, reward, done, info = env.step(action)
             episode_reward += reward
@@ -133,15 +134,33 @@ def play_game(args, agent, env, total_episodes=1):
         rewards.append(episode_reward)
     print('Run %d episodes'%(total_episodes))
     print('Mean:', np.mean(rewards))
-    if args.gbp or args.gradCAM or args.gbp_GradCAM:
-        init_saliency_map(args, agent, history)
+    init_saliency_map(args, agent, history)
 
     return history
 
 
+def test(agent, env, total_episodes=30):
+    rewards = []
+    for i in range(total_episodes):
+        state = env.reset()
+        agent.init_game_setting()
+        done = False
+        episode_reward = 0.0
+
+        #playing one game
+        while(not done):
+            action = agent.make_action(state, test=True)
+            state, reward, done, info = env.step(action)
+            episode_reward += reward
+
+        rewards.append(episode_reward)
+    print('Run %d episodes'%(total_episodes))
+    print('Mean:', np.mean(rewards))
+
+
 def run(args):
     if args.test_dqn:
-        env = Environment('BreakoutNoFrameskip-v4', args, atari_wrapper=True, test=True)
+        env = Environment('SeaquestNoFrameskip-v0', args, atari_wrapper=True, test=True)
         from agent_dir.agent_dqn import Agent_DQN
         agent = Agent_DQN(env, args)
         play_game(agent, env, total_episodes=1)
