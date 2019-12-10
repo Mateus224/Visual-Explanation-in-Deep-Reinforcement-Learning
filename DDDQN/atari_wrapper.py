@@ -206,7 +206,7 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
         env = FrameStack(env, 4)
     return env
 
-def make_wrap_atari(env_id='Breakout-v0', clip_rewards=True):
+def make_wrap_atari(env_id='Breakout-v0', clip_rewards=False):
     #env = gym.make(env_id)
     env = make_atari(env_id)
-    return wrap_deepmind(env, clip_rewards=clip_rewards, frame_stack=True, scale=True)
+    return wrap_deepmind(env, clip_rewards=True, frame_stack=True, scale=True)
