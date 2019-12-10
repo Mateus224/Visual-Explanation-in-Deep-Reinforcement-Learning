@@ -7,7 +7,7 @@ This code will include in the futer not only visual explanation through backprop
 For now we will compare how good we can visualize DQN and dueling double DQN Algorithmes. As environment we will use ATARI Game and later Doom.
 
 
-If you have a trained dueling agent run:
+If you have a trained dueling agent and you want visualize what he learned run:
 
 ```console
 python3 main.py --test_dqn --gbp --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5
@@ -32,4 +32,13 @@ Here we can see how the agent is looking more on his position (in the advatage p
 ![Alt text](pictures/1.png?raw=true "example 1")
 ![Alt text](pictures/2.png?raw=true "example 2")
 
+For Attention Networks (Visualization is not working yet):
 
+train:
+```console
+python3 dqn_atari.py --net_mode duel --ddqn --num_frames 10 --no_monitor --selector --bidir --recurrent --a_t --selector --task_name 'SpatialAt_DQN' --seed 36 --env 'SeaquestDeterministic-v0'
+```
+test:
+```console
+python3 dqn_atari.py --net_mode duel --ddqn --num_frames 10 --recurrent --a_t --bidir --selector --task_name 'SpatialAt_DQN' --test --load_network --test --load_network_path=log/SeaquestDeterministic-v0-run6-SpatialAt_DQN/qnet7628.h5 --env 'SeaquestDeterministic-v0'
+```
