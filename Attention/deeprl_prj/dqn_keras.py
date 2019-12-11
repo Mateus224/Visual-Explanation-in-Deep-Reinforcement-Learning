@@ -20,6 +20,7 @@ from gym import wrappers
 import tensorflow as tf
 import numpy as np
 
+
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 config.allow_soft_placement = True
