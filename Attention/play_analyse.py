@@ -31,13 +31,12 @@ def init_saliency_map(args, agent, history, first_frame=0, num_frames=1000, pref
     visualization_network_model.load_weights(args.load_network_path)
     frame_1= np.zeros((84, 84))
     total_frames=len(history['state'])
-    backprop_fn = init_guided_backprop(visualization_network_model,"timedistributed_17")
-    if args.dueling:
-        backprop_fn_advatage = init_guided_backprop(visualization_network_model,"dense_10")
+    backprop_fn = init_guided_backprop(visualization_network_model,"value_fc")
+    if args.duel_visual:
+        backprop_fn_advatage = init_guided_backprop(visualization_network_model,"action_mean")
         fig_array = np.zeros((2,600,84,84,3))
     else:
         fig_array = np.zeros((1,600,84,84,3))
-    print("len: ",total_frames)
     for i in range(600):#total_frames): #num_frames
         ix = first_frame+i
         if ix < total_frames: # prevent loop from trying to process a frame ix greater than rollout length
@@ -48,12 +47,12 @@ def init_saliency_map(args, agent, history, first_frame=0, num_frames=1000, pref
             gbp_heatmap = guided_backprop(frame, backprop_fn)
             #
             history['gradients'].append(gbp_heatmap)
-            if args.dueling:
+            if args.duel_visual:
                 gbp_heatmap = guided_backprop(frame, backprop_fn_advatage)
                 history['gradients_duel_adv'].append(gbp_heatmap)
     history_grad=history['gradients'].copy()
     fig_array[0] = normalization(history_grad, history)
-    if args.dueling:
+    if args.duel_visual:
         history_grad_adv=history['gradients_duel_adv'].copy()
         fig_array[1] = normalization(history_grad_adv, history)
     make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name)
@@ -61,7 +60,6 @@ def init_saliency_map(args, agent, history, first_frame=0, num_frames=1000, pref
 def normalization(gbp_heatmap, history):
     gbp_heatmap=np.asarray(gbp_heatmap)
     gbp_heatmap=gbp_heatmap[:,0,:,:,:]
-    print(gbp_heatmap.shape)
     #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
     gbp_heatmap-= gbp_heatmap.mean() 
     gbp_heatmap/= (gbp_heatmap.std() + 1e-5) #
@@ -72,12 +70,13 @@ def normalization(gbp_heatmap, history):
     # clip to [0, 1]
     gbp_heatmap += 0.5
     gbp_heatmap = np.clip(gbp_heatmap, 0, 1)
-    gbp_heatmap_pic1 = gbp_heatmap[:,:,:,0]
-    gbp_heatmap_pic2 = gbp_heatmap[:,:,:,1]
+    print("print",gbp_heatmap.shape)
+    gbp_heatmap_pic1 = gbp_heatmap[:,0,:,:,0]
+    gbp_heatmap_pic2 = gbp_heatmap[:,0,:,:,1]
     frame = history['state'].copy()
     frame =np.clip(frame,0,1)
     frame = frame[:,:,:,0]
-    mixed = np.stack((gbp_heatmap_pic1,gbp_heatmap_pic1, frame), axis=3) 
+    mixed = np.stack((gbp_heatmap_pic1, gbp_heatmap_pic1,frame), axis=3) 
     return mixed
 
     #return mixed
@@ -94,7 +93,7 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
         for i in range(600):#total_frames): #num_frames
             plotColumns = 2
             plotRows = 1
-            if args.dueling:
+            if args.duel_visual:
                 titleList=["V(s; theta, beta)","A(s,a;thata,alpha)"]
                 for j in range(0, plotColumns*plotRows):
                     img = fig_array[j,i,:,:,:]
@@ -102,13 +101,11 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
                     ax.set_xlabel(titleList[j])
                     plt.imshow(img)
             else:
-                plt.imshow(fig_array[0,i,:,:,:]) 
-
+                plt.imshow(fig_array[0,i,:,:,:]) #if error because no directory that exist
             writer.grab_frame() 
             fig.clear()
             if i%100==0:
                 print(i)
-            
 
 
 
@@ -116,23 +113,27 @@ def play_game(args, agent, env, total_episodes=1):
     
     history = { 'state': [], 'action': [], 'gradients':[], 'gradients_duel_adv':[],'movie_frames':[]}
     rewards = []
+    if agent.load_network:
+        agent.q_network.load_weights(agent.load_network_path)
     for i in range(total_episodes):
         state = env.reset()
         #agent.init_game_setting()
         done = False
         episode_reward = 0.0
-
+        action_state = agent.history_processor.process_state_for_network(
+            agent.atari_processor.process_state_for_network(state))
+        print("shape:",action_state.shape)
         #playing one game
         #while(not done):
-        for _ in range(800):
-            action_state = agent.history_processor.process_state_for_network(
-                agent.atari_processor.process_state_for_network(state))
+        for _ in range(600):
+
             action = agent.select_action(action_state, is_training=False)
             state, reward, done, info = env.step(action)
             episode_reward += reward
-            if args.gbp or args.gradCAM or args.gbp_GradCAM:
-                history['state'].append(state)
-                history['action'].append(action)
+            history['state'].append(action_state)
+            history['action'].append(action)
+            action_state = agent.history_processor.process_state_for_network(
+                agent.atari_processor.process_state_for_network(state))
         rewards.append(episode_reward)
     print('Run %d episodes'%(total_episodes))
     print('Mean:', np.mean(rewards))

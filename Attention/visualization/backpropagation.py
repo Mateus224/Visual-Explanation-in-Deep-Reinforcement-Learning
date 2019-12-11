@@ -43,7 +43,7 @@ def build_guided_model(agent):
         return agent.build_network()
 
 def init_guided_backprop(guided_model, layer_name):
-    input_imgs = guided_model.input[0]
+    input_imgs = guided_model.input#[0]
     layer_output = guided_model.get_layer(layer_name).output
     grads = K.gradients(layer_output, input_imgs)[0]
     backprop_fn = K.function([input_imgs, K.learning_phase()], [grads])
@@ -51,7 +51,7 @@ def init_guided_backprop(guided_model, layer_name):
 
 def guided_backprop(frame, backprop_fn):
     """Guided Backpropagation method for visualizing input saliency."""
-    grads_val = backprop_fn([frame, 0])[0]
+    grads_val = backprop_fn([frame, 0])#[0]
     return grads_val
 
 

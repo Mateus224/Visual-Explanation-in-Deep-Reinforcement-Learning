@@ -98,7 +98,7 @@ def main():
     parser.add_argument('--num_episodes_at_test', default = 20, type=int, help='Number of episodes the agent plays at test')
     parser.add_argument('--ddqn', default=False, dest='ddqn', action='store_true', help='enable ddqn')
     parser.add_argument('--train', default=False, dest='train', action='store_true', help='Train mode')
-    parser.add_argument('--test', dest='test', default=False, action='store_false', help='Test mode')
+    parser.add_argument('--test', dest='test', default=False, action='store_true', help='Test mode')
     parser.add_argument('--no_experience', default=False, action='store_true', help='do not use experience replay')
     parser.add_argument('--no_target', default=False, action='store_true', help='do not use target fixing')
     parser.add_argument('--no_monitor', default=False, action='store_true', help='do not record video')
@@ -109,6 +109,7 @@ def main():
     parser.add_argument('--selector', default=False, dest='selector', action='store_true', help='enable selector for spatial attention')
     parser.add_argument('--bidir', default=False, dest='bidir', action='store_true', help='enable two layer bidirectional lstm')
     parser.add_argument('--gbp', action='store_false', help='visualize what the network learned with Guided backpropagation')
+    parser.add_argument('--duel_visual',default=False, action='store_true', help='for visualisation of dueling networks')
 
     args = parser.parse_args()
     args.output = get_output_folder(args, args.output, args.env, args.task_name)
@@ -125,7 +126,7 @@ def main():
 
     num_actions = env.action_space.n
     print(">>>> Game ", args.env, " #actions: ", num_actions)
-
+    print(args.test)
     dqn = DQNAgent(args, num_actions)
     if args.train:
         print(">> Training mode.")
