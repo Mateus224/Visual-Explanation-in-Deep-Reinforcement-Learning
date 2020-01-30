@@ -19,6 +19,7 @@ I Introduce a new model of an off-policy Network which performe better then the 
 
 [on Policy algorithms:]
 - [X] A3C
+- [ ] A3C Bidirectional LSTM
 
 # Visualization Techniques:
 
