@@ -10,6 +10,7 @@ from keras.layers import Input, Convolution2D, Flatten, Dense, LeakyReLU, merge
 from keras.optimizers import RMSprop,Adam
 import keras.backend as K
 from keras.layers import Lambda
+from keras.utils.vis_utils import plot_model
 
 from keras.backend.tensorflow_backend import set_session
 
