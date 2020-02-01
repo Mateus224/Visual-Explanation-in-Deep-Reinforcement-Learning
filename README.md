@@ -1,5 +1,9 @@
 ## Visual-Explanation-in-Deep-Reinforcement-Learning-through-Guided-Backpropagation-and-GradCam
-This is the first algorithm which visualizes the knowledge of an agent trained by Deep Reinforcement Learning (paper will be published in Februar) using backpropagation. It shows why the agent is performing the action. Which pixels had the biggest influence on the decision of the agent.
+This is the first algorithm which visualizes the knowledge of an agent trained by Deep Reinforcement Learning (paper will be published in March) using backpropagation / Guided Backpropagation / GradCam and Guided GradCam. The goal of the work is to  shows why the agent is performing the action. Which pixels had the biggest influence on the decision of the agent.
+
+
+## Splitted Attention DDQN
+I Introduce a new model of an off-policy Network which performe better then the state of the art Attention DQQN
 
 
 # Deep Reinfocement Learning Algorithms:
@@ -10,25 +14,26 @@ This is the first algorithm which visualizes the knowledge of an agent trained b
 - [x] Dueling DDQN
 - [ ] LSTM DQN
 - [ ] Bidirectional LSTM DQN
-- [ ] Attention LSTM DQN
+- [X] Attention LSTM DQN
+- [X] Splitted Attention LSTM DQN
 
 [on Policy algorithms:]
-- [ ] Policy Gradient
-- [ ] A3C
+- [X] A3C
+- [ ] A3C Bidirectional LSTM
 
 # Visualization Techniques:
 
 - [X] Backpropagation
 - [x] Guided Backpropagation
-- [ ] GradCam
-- [ ] Guided GradCam
+- [X] GradCam
+- [X] Guided GradCam
 - [ ] SmoothGrad
 - [ ] Perturbation-based Saliency Map
 
 
 
 
-For now we will compare how good we can visualize DQN and dueling double DQN Algorithms. As environment we will use ATARI Game and later Doom.
+For now we will compare how good we can visualize DQN and dueling double DQN Algorithms. As environment we will use ATARI.
 
 
 If you have a trained dueling agent and you want visualize what he learned run:
