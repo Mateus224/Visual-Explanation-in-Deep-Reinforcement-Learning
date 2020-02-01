@@ -72,13 +72,13 @@ def build_network(input_shape, num_actions):
     input_data_expanded = Reshape((input_shape[0], input_shape[1], input_shape[2], 1), input_shape = input_shape) (input_data)
     input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
     
-    h1 = TimeDistributed(Convolution2D(32, (8, 8), strides=(4, 4), activation = "relu", data_format='channels_last'), \
+    h1 = TimeDistributed(Convolution2D(32, (8, 8), strides=(4, 4), activation = "selu", data_format='channels_last'), \
         input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_TimeDistributed)
 
-    h2 = TimeDistributed(Convolution2D(64, (4, 4), strides=(2, 2), activation = "relu"))(h1)
-    h3 = TimeDistributed(Convolution2D(64, (3, 3), strides=(1, 1), activation = "relu"))(h2)
+    h2 = TimeDistributed(Convolution2D(64, (4, 4), strides=(2, 2), activation = "selu"))(h1)
+    h3 = TimeDistributed(Convolution2D(64, (3, 3), strides=(1, 1), activation = "selu"))(h2)
     flatten_hidden = TimeDistributed(Flatten())(h3)
-    hidden_input = TimeDistributed(Dense(512, activation = 'relu', name = 'flat_to_512')) (flatten_hidden)
+    hidden_input = TimeDistributed(Dense(512, activation = 'selu', name = 'flat_to_512')) (flatten_hidden)
     
 
     #Bidrection for a_fc(s,a) and v_fc layer
