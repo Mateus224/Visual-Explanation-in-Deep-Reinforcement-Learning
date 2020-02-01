@@ -13,8 +13,10 @@ import keras
 from keras import backend as K
 from keras.optimizers import (Adam, RMSprop)
 from keras.layers import (Activation, Convolution2D, Dense, Flatten, Input,
-        Permute, merge, Merge,  Lambda, Reshape, TimeDistributed, LSTM, RepeatVector, Permute) #multiply,
+        Permute, merge, multiply,  Lambda, Reshape, TimeDistributed, LSTM, RepeatVector, Permute) #multiply,
 from keras.layers.wrappers import Bidirectional
+import tensorflow as tf
+from keras import optimizers
 #from keras.layers import Input, Conv2D, Flatten, Dense
 
 # -----
@@ -70,11 +72,11 @@ def build_network(input_shape, num_actions):
     input_data_expanded = Reshape((input_shape[0], input_shape[1], input_shape[2], 1), input_shape = input_shape) (input_data)
     input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
     
-    h1 = TimeDistributed(Convolution2D(32, 8, 8, subsample=(4, 4), activation = "relu"), \
+    h1 = TimeDistributed(Convolution2D(32, (8, 8), strides=(4, 4), activation = "relu", data_format='channels_last'), \
         input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_TimeDistributed)
 
-    h2 = TimeDistributed(Convolution2D(64, 4, 4, subsample=(2, 2), activation = "relu"))(h1)
-    h3 = TimeDistributed(Convolution2D(64, 3, 3, subsample=(1, 1), activation = "relu"))(h2)
+    h2 = TimeDistributed(Convolution2D(64, (4, 4), strides=(2, 2), activation = "relu"))(h1)
+    h3 = TimeDistributed(Convolution2D(64, (3, 3), strides=(1, 1), activation = "relu"))(h2)
     flatten_hidden = TimeDistributed(Flatten())(h3)
     hidden_input = TimeDistributed(Dense(512, activation = 'relu', name = 'flat_to_512')) (flatten_hidden)
     
@@ -99,14 +101,14 @@ def build_network(input_shape, num_actions):
     attention_vs = Activation('softmax')(attention_vs)
     attention_vs = RepeatVector(1)(attention_vs)
     attention_vs = Permute([2, 1])(attention_vs)
-    sent_representation_vs = merge([value, attention_vs], mode='mul',name = "Attention V")
+    sent_representation_vs = multiply([value, attention_vs])
 
     attention_pol = TimeDistributed(Dense(1, activation='tanh'),name = "AAS")(action) 
     attention_pol = Flatten()(attention_pol)
     attention_pol = Activation('softmax')(attention_pol)
     attention_pol = RepeatVector(num_actions)(attention_pol)
     attention_pol = Permute([2, 1])(attention_pol)
-    sent_representation_policy =merge([action, attention_pol], mode='mul',name = "Attention P")
+    sent_representation_policy = multiply([action, attention_pol])
 
     value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
     context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
@@ -154,8 +156,8 @@ class LearningAgent(object):
 
         _, _, self.train_net, adventage = build_network((84,84,10),action_space.n)#self.observation_shape, action_space.n)
 
-        self.train_net.compile(optimizer=RMSprop(epsilon=0.1, rho=0.99),
-                               loss=[value_loss(), policy_loss(adventage, args.beta)])
+        self.train_net.compile(optimizer=optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999),
+                               loss=[tf.keras.losses.Huber(), policy_loss(adventage, args.beta)])
 
         self.pol_loss = deque(maxlen=25)
         self.val_loss = deque(maxlen=25)
