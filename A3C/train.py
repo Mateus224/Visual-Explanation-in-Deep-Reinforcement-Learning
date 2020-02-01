@@ -3,12 +3,19 @@ from scipy.misc.pilutil import imread
 from skimage.color import rgb2gray
 from multiprocessing import *
 from collections import deque
+import traceback
 import gym
 import numpy as np
 import h5py
 import argparse
 from keras.models import Model
-from keras.layers import Input, Conv2D, Flatten, Dense
+import keras
+from keras import backend as K
+from keras.optimizers import (Adam, RMSprop)
+from keras.layers import (Activation, Convolution2D, Dense, Flatten, Input,
+        Permute, merge, Merge,  Lambda, Reshape, TimeDistributed, LSTM, RepeatVector, Permute) #multiply,
+from keras.layers.wrappers import Bidirectional
+#from keras.layers import Input, Conv2D, Flatten, Dense
 
 # -----
 parser = argparse.ArgumentParser(description='Training model')
@@ -35,24 +42,82 @@ args = parser.parse_args()
 # -----
 
 
-def build_network(input_shape, output_shape):
+def build_network(input_shape, num_actions):
+
 
     # -----
-    state = Input(shape=input_shape)
-    h = Conv2D(16, kernel_size=(8, 8), strides=(4, 4), activation='relu', data_format='channels_first')(state)
-    h = Conv2D(32, kernel_size=(4, 4), strides=(2, 2), activation='relu', data_format='channels_first')(h)
-    h = Flatten()(h)
-    h = Dense(256, activation='relu')(h)
+    #state = Input(shape=input_shape)
+    #h = Conv2D(16, kernel_size=(8, 8), strides=(4, 4), activation='relu', data_format='channels_first')(state)
+    #h = Conv2D(32, kernel_size=(4, 4), strides=(2, 2), activation='relu', data_format='channels_first')(h)
+    #h = Flatten()(h)
+    #h = Dense(256, activation='relu')(h)
 
-    value = Dense(1, activation='linear', name='value')(h)
-    policy = Dense(output_shape, activation='softmax', name='policy')(h)
+    #value = Dense(1, activation='linear', name='value')(h)
+    #policy = Dense(output_shape, activation='softmax', name='policy')(h)
 
-    value_network = Model(inputs=state, outputs=value)
-    policy_network = Model(inputs=state, outputs=policy)
+    #value_network = Model(inputs=state, outputs=value)
+    #policy_network = Model(inputs=state, outputs=policy)
+
+    #adventage = Input(shape=(1,))
+    #train_network = Model(inputs=[state, adventage], outputs=[value, policy])
+
+    #return value_network, policy_network, train_network, adventage
+
+#-------------------------------------------------------------------------
+    input_data = Input(shape = input_shape, name = "input")
+    
+    print('>>>> Defining Recurrent Modules...')
+    input_data_expanded = Reshape((input_shape[0], input_shape[1], input_shape[2], 1), input_shape = input_shape) (input_data)
+    input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
+    
+    h1 = TimeDistributed(Convolution2D(32, 8, 8, subsample=(4, 4), activation = "relu"), \
+        input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_TimeDistributed)
+
+    h2 = TimeDistributed(Convolution2D(64, 4, 4, subsample=(2, 2), activation = "relu"))(h1)
+    h3 = TimeDistributed(Convolution2D(64, 3, 3, subsample=(1, 1), activation = "relu"))(h2)
+    flatten_hidden = TimeDistributed(Flatten())(h3)
+    hidden_input = TimeDistributed(Dense(512, activation = 'relu', name = 'flat_to_512')) (flatten_hidden)
+    
+
+    #Bidrection for a_fc(s,a) and v_fc layer
+    ##################################
+    if 1==1:#args.bidir:
+        value_hidden =Bidirectional(LSTM(512, return_sequences=True,  name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+        value_hidden_out = Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (value_hidden)
+        action_hidden =Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+        action_hidden_out = Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (action_hidden)
+
+    else:
+         value_hidden_out = LSTM(512, return_sequences=True, stateful=False, input_shape=(10, 512)) (hidden_input)
+         action_hidden_out = LSTM(512, return_sequences=True, stateful=False, input_shape=(10, 512)) (hidden_input)
+    
+    value = TimeDistributed(Dense(1, name = "value"))(value_hidden_out)
+    action = TimeDistributed(Dense(num_actions, name = "action"))(action_hidden_out)
+    
+    attention_vs = TimeDistributed(Dense(1, activation='tanh'),name = "AVS")(value) 
+    attention_vs = Flatten()(attention_vs)
+    attention_vs = Activation('softmax')(attention_vs)
+    attention_vs = RepeatVector(1)(attention_vs)
+    attention_vs = Permute([2, 1])(attention_vs)
+    sent_representation_vs = merge([value, attention_vs], mode='mul',name = "Attention V")
+
+    attention_pol = TimeDistributed(Dense(1, activation='tanh'),name = "AAS")(action) 
+    attention_pol = Flatten()(attention_pol)
+    attention_pol = Activation('softmax')(attention_pol)
+    attention_pol = RepeatVector(num_actions)(attention_pol)
+    attention_pol = Permute([2, 1])(attention_pol)
+    sent_representation_policy =merge([action, attention_pol], mode='mul',name = "Attention P")
+
+    value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
+    context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
+    policy = Dense(num_actions, activation='softmax', name='policy')(context_policy)
+
+
+    value_network = Model(input=input_data, output=value)
+    policy_network = Model(input=input_data, output=policy)
 
     adventage = Input(shape=(1,))
-    train_network = Model(inputs=[state, adventage], outputs=[value, policy])
-
+    train_network = Model(input=[input_data, adventage], output=[value, policy])
     return value_network, policy_network, train_network, adventage
 
 
@@ -83,11 +148,11 @@ class LearningAgent(object):
         # -----
         self.screen = screen
         self.input_depth = 1
-        self.past_range = 3
+        self.past_range = 10
         self.observation_shape = (self.input_depth * self.past_range,) + self.screen
         self.batch_size = batch_size
 
-        _, _, self.train_net, adventage = build_network(self.observation_shape, action_space.n)
+        _, _, self.train_net, adventage = build_network((84,84,10),action_space.n)#self.observation_shape, action_space.n)
 
         self.train_net.compile(optimizer=RMSprop(epsilon=0.1, rho=0.99),
                                loss=[value_loss(), policy_loss(adventage, args.beta)])
@@ -108,6 +173,7 @@ class LearningAgent(object):
         frames = len(last_observations)
         self.counter += frames
         # -----
+        last_observations=last_observations.reshape((20,84,84,10))
         values, policy = self.train_net.predict([last_observations, self.unroll])
         # -----
         self.targets.fill(0.)
@@ -121,15 +187,15 @@ class LearningAgent(object):
         self.entropy.append(entropy)
         self.values.append(np.mean(values))
         min_val, max_val, avg_val = min(self.values), max(self.values), np.mean(self.values)
-        print('\rFrames: %8d; Policy-Loss: %10.6f; Avg: %10.6f '
-              '--- Value-Loss: %10.6f; Avg: %10.6f '
-              '--- Entropy: %7.6f; Avg: %7.6f '
-              '--- V-value; Min: %6.3f; Max: %6.3f; Avg: %6.3f' % (
-                  self.counter,
-                  loss[2], np.mean(self.pol_loss),
-                  loss[1], np.mean(self.val_loss),
-                  entropy, np.mean(self.entropy),
-                  min_val, max_val, avg_val), end='')
+        #print('\rFrames: %8d; Policy-Loss: %10.6f; Avg: %10.6f '
+        #      '--- Value-Loss: %10.6f; Avg: %10.6f '
+        #      '--- Entropy: %7.6f; Avg: %7.6f '
+        #      '--- V-value; Min: %6.3f; Max: %6.3f; Avg: %6.3f' % (
+        #          self.counter,
+        #          loss[2], np.mean(self.pol_loss),
+        #          loss[1], np.mean(self.val_loss),
+        #          entropy, np.mean(self.entropy),
+        #          min_val, max_val, avg_val), end='')
         # -----
         self.swap_counter -= frames
         if self.swap_counter < 0:
@@ -139,62 +205,66 @@ class LearningAgent(object):
 
 
 def learn_proc(mem_queue, weight_dict):
-    import os
-    pid = os.getpid()
-    os.environ['THEANO_FLAGS'] = 'floatX=float32,device=gpu,nvcc.fastmath=False,lib.cnmem=0.3,' + \
-                                 'compiledir=th_comp_learn'
-    # -----
-    print(' %5d> Learning process' % (pid,))
-    # -----
-    save_freq = args.save_freq
-    learning_rate = args.learning_rate
-    batch_size = args.batch_size
-    checkpoint = args.checkpoint
-    steps = args.steps
-    # -----
-    env = gym.make(args.game)
-    agent = LearningAgent(env.action_space, batch_size=args.batch_size, swap_freq=args.swap_freq)
-    # -----
-    if checkpoint > 0:
-        print(' %5d> Loading weights from file' % (pid,))
-        agent.train_net.load_weights('model-%s-%d.h5' % (args.game, checkpoint,))
+    try:
+        import os
+        pid = os.getpid()
+        os.environ['THEANO_FLAGS'] = 'floatX=float32,device=gpu,nvcc.fastmath=False,lib.cnmem=0.3,' + \
+                                     'compiledir=th_comp_learn'
         # -----
-    print(' %5d> Setting weights in dict' % (pid,))
-    weight_dict['update'] = 0
-    weight_dict['weights'] = agent.train_net.get_weights()
-    # -----
-    last_obs = np.zeros((batch_size,) + agent.observation_shape)
-    actions = np.zeros(batch_size, dtype=np.int32)
-    rewards = np.zeros(batch_size)
-    # -----
-    idx = 0
-    agent.counter = checkpoint
-    save_counter = checkpoint % save_freq + save_freq
-    while True:
+        print(' %5d> Learning process' % (pid,))
         # -----
-        last_obs[idx, ...], actions[idx], rewards[idx] = mem_queue.get()
-        idx = (idx + 1) % batch_size
-        if idx == 0:
-            lr = max(0.00000001, (steps - agent.counter) / steps * learning_rate)
-            updated = agent.learn(last_obs, actions, rewards, learning_rate=lr)
-            if updated:
-                # print(' %5d> Updating weights in dict' % (pid,))
-                weight_dict['weights'] = agent.train_net.get_weights()
-                weight_dict['update'] += 1
+        save_freq = args.save_freq
+        learning_rate = args.learning_rate
+        batch_size = args.batch_size
+        checkpoint = args.checkpoint
+        steps = args.steps
         # -----
-        save_counter -= 1
-        if save_counter < 0:
-            save_counter += save_freq
-            agent.train_net.save_weights('model-%s-%d.h5' % (args.game, agent.counter,), overwrite=True)
+        env = gym.make(args.game)
+        agent = LearningAgent(env.action_space, batch_size=args.batch_size, swap_freq=args.swap_freq)
+        # -----
+        if checkpoint > 0:
+            print(' %5d> Loading weights from file' % (pid,))
+            agent.train_net.load_weights('model-%s-%d.h5' % (args.game, checkpoint,))
+            # -----
+        print(' %5d> Setting weights in dict' % (pid,))
+        weight_dict['update'] = 0
+        weight_dict['weights'] = agent.train_net.get_weights()
+        # -----
+        last_obs = np.zeros((batch_size,) + agent.observation_shape)
+        actions = np.zeros(batch_size, dtype=np.int32)
+        rewards = np.zeros(batch_size)
+        # -----
+        idx = 0
+        agent.counter = checkpoint
+        save_counter = checkpoint % save_freq + save_freq
+        while True:
+            # -----
+            last_obs[idx, ...], actions[idx], rewards[idx] = mem_queue.get()
+            idx = (idx + 1) % batch_size
+            if idx == 0:
+                lr = max(0.00000001, (steps - agent.counter) / steps * learning_rate)
+                updated = agent.learn(last_obs, actions, rewards, learning_rate=lr)
+                if updated:
+                    # print(' %5d> Updating weights in dict' % (pid,))
+                    weight_dict['weights'] = agent.train_net.get_weights()
+                    weight_dict['update'] += 1
+            # -----
+            save_counter -= 1
+            if save_counter < 0:
+                save_counter += save_freq
+                agent.train_net.save_weights('model-%s-%d.h5' % (args.game, agent.counter,), overwrite=True)
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
 
 
 class ActingAgent(object):
     def __init__(self, action_space, screen=(84, 84), n_step=8, discount=0.99):
         self.screen = screen
         self.input_depth = 1
-        self.past_range = 3
+        self.past_range = 10
         self.observation_shape = (self.input_depth * self.past_range,) + self.screen
-        self.value_net, self.policy_net, self.load_net, adv = build_network(self.observation_shape, action_space.n)
+        self.value_net, self.policy_net, self.load_net, adv = build_network((84,84,10), action_space.n)
         self.value_net.compile(optimizer='rmsprop', loss='mse')
         self.policy_net.compile(optimizer='rmsprop', loss='categorical_crossentropy')
         self.load_net.compile(optimizer='rmsprop', loss='mse', loss_weights=[0.5, 1.])  # dummy loss
@@ -211,8 +281,9 @@ class ActingAgent(object):
 
 
     def init_episode(self, observation):
-        for i in range(self.past_range):
-            self.save_observation(observation)
+
+        #for i in range(self.past_range):
+        self.save_observation(observation)
 
     def reset(self):
         self.counter = 0
@@ -231,87 +302,99 @@ class ActingAgent(object):
         # -----
         self.counter += 1
         if terminal or self.counter >= self.n_step:
+            
             r = 0.
             if not terminal:
-                r = self.value_net.predict(self.observations[None, ...])[0]
+                reshaped_observation=self.observations.reshape((1,84,84,10))
+                r = self.value_net.predict(reshaped_observation)[0]
             for i in range(self.counter):
                 r = self.n_step_rewards[i] + self.discount * r
                 mem_queue.put((self.n_step_observations[i], self.n_step_actions[i], r))
             self.reset()
 
     def choose_action(self):
-        policy = self.policy_net.predict(self.observations[None, ...])[0]
+        reshaped_observation=self.observations.reshape((1,84,84,10))
+        policy = self.policy_net.predict(reshaped_observation)[0]
+
         return np.random.choice(np.arange(self.action_space.n), p=policy)
 
     def save_observation(self, observation):
+        
         self.last_observations = self.observations[...]
         self.observations = np.roll(self.observations, -self.input_depth, axis=0)
         self.observations[-self.input_depth:, ...] = self.transform_screen(observation)
+        #self.observations =self.observations.reshape(())
+
     def transform_screen(self, data):
         return rgb2gray(imresize(data, self.screen))[None, ...]
 
 
 def generate_experience_proc(mem_queue, weight_dict, no):
-    import os
-    pid = os.getpid()
-    os.environ['THEANO_FLAGS'] = 'floatX=float32,device=gpu,nvcc.fastmath=True,lib.cnmem=0,' + \
-                                 'compiledir=th_comp_act_' + str(no)
-    # -----
-    print(' %5d> Process started' % (pid,))
-    # -----
-    frames = 0
-    batch_size = args.batch_size
-    # -----
-    env = gym.make(args.game)
-    agent = ActingAgent(env.action_space, n_step=args.n_step)
-
-    if frames > 0:
-        print(' %5d> Loaded weights from file' % (pid,))
-        agent.load_net.load_weights('model-%s-%d.h5' % (args.game, frames))
-    else:
-        import time
-        while 'weights' not in weight_dict:
-            time.sleep(0.1)
-        agent.load_net.set_weights(weight_dict['weights'])
-        print(' %5d> Loaded weights from dict' % (pid,))
-
-    best_score = 0
-    avg_score = deque([0], maxlen=25)
-    
-    last_update = 0
-    while True:
-        done = False
-        episode_reward = 0
-        op_last, op_count = 0, 0
-        observation = env.reset()
-        agent.init_episode(observation)
-
+    try:
+        import os
+        pid = os.getpid()
+        os.environ['THEANO_FLAGS'] = 'floatX=float32,device=gpu,nvcc.fastmath=True,lib.cnmem=0,' + \
+                                     'compiledir=th_comp_act_' + str(no)
         # -----
-        while not done:
-            frames += 1
-            action = agent.choose_action()
-            observation, reward, done, _ = env.step(action)
-            episode_reward += reward
-            best_score = max(best_score, episode_reward)
-            # -----
-            agent.sars_data(action, reward, observation, done, mem_queue)
-            # -----
-            op_count = 0 if op_last != action else op_count + 1
-            done = done or op_count >= 100
-            op_last = action
-            # -----
-            if frames % 2000 == 0:
-                print(' %5d> Best: %4d; Avg: %6.2f; Max: %4d' % (
-                    pid, best_score, np.mean(avg_score), np.max(avg_score)))
-            if frames % batch_size == 0:
-                update = weight_dict.get('update', 0)
-                if update > last_update:
-                    last_update = update
-                    # print(' %5d> Getting weights from dict' % (pid,))
-                    agent.load_net.set_weights(weight_dict['weights'])
+        print(' %5d> Process started' % (pid,))
         # -----
-        avg_score.append(episode_reward)
+        frames = 0
+        batch_size = args.batch_size
+        # -----
+        env = gym.make(args.game)
+        agent = ActingAgent(env.action_space, n_step=args.n_step)
+        if frames > 0:
+            print(' %5d> Loaded weights from file' % (pid,))
+            agent.load_net.load_weights('model-%s-%d.h5' % (args.game, frames))
+        else:
+            import time
+            while 'weights' not in weight_dict:
+                time.sleep(0.1)
+            agent.load_net.set_weights(weight_dict['weights'])
+            print(' %5d> Loaded weights from dict' % (pid,))
+        
+        best_score = 0
+        avg_score = deque([0], maxlen=25)
+        
+        last_update = 0
+        while True:
+            done = False
+            episode_reward = 0
+            op_last, op_count = 0, 0
+            observation = env.reset()
+            
+            agent.init_episode(observation)
+            
 
+            # -----
+            while not done:
+                frames += 1
+                action = agent.choose_action()
+                
+                observation, reward, done, _ = env.step(action)
+                episode_reward += reward
+                best_score = max(best_score, episode_reward)
+                # -----
+                agent.sars_data(action, reward, observation, done, mem_queue)
+                # -----
+                op_count = 0 if op_last != action else op_count + 1
+                done = done or op_count >= 100
+                op_last = action
+                # -----
+                if frames % 200 == 0:
+                    print(' %5d> Best: %4d; Avg: %6.2f; Max: %4d' % (
+                        pid, best_score, np.mean(avg_score), np.max(avg_score)))
+                if frames % batch_size == 0:
+                    update = weight_dict.get('update', 0)
+                    if update > last_update:
+                        last_update = update
+                        # print(' %5d> Getting weights from dict' % (pid,))
+                        agent.load_net.set_weights(weight_dict['weights'])
+            # -----
+            avg_score.append(episode_reward)
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
 
 def init_worker():
     import signal
@@ -324,12 +407,12 @@ def main():
     mem_queue = manager.Queue(args.queue_size)
 
     pool = Pool(args.processes + 1, init_worker)
-
+    #frame=np.zeros((84,84,10))
+    #print(pool.map(build_network(frame.shape,18), range(1)))
     try:
         for i in range(args.processes):
             pool.apply_async(generate_experience_proc, (mem_queue, weight_dict, i))
         pool.apply_async(learn_proc, (mem_queue, weight_dict))
-
         pool.close()
         pool.join()
 
