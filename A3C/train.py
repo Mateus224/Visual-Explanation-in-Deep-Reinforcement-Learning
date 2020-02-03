@@ -17,6 +17,7 @@ from keras.layers import (Activation, Convolution2D, Dense, Flatten, Input,
 from keras.layers.wrappers import Bidirectional
 import tensorflow as tf
 from keras import optimizers
+from keras.losses import huber_loss
 #from keras.layers import Input, Conv2D, Flatten, Dense
 
 # -----
@@ -67,59 +68,63 @@ def build_network(input_shape, num_actions):
 
 #-------------------------------------------------------------------------
     input_data = Input(shape = input_shape, name = "input")
+    try:
     
-    print('>>>> Defining Recurrent Modules...')
-    input_data_expanded = Reshape((input_shape[0], input_shape[1], input_shape[2], 1), input_shape = input_shape) (input_data)
-    input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
-    
-    h1 = TimeDistributed(Convolution2D(32, (8, 8), strides=(4, 4), activation = "selu", data_format='channels_last'), \
-        input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_TimeDistributed)
+        print('>>>> Defining Recurrent Modules...')
+        input_data_expanded = Reshape((input_shape[0], input_shape[1], input_shape[2], 1), input_shape = input_shape) (input_data)
+        input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
+        
+        h1 = TimeDistributed(Convolution2D(32, (8, 8), strides=(4, 4), activation = "selu", data_format='channels_last'), \
+            input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_TimeDistributed)
 
-    h2 = TimeDistributed(Convolution2D(64, (4, 4), strides=(2, 2), activation = "selu"))(h1)
-    h3 = TimeDistributed(Convolution2D(64, (3, 3), strides=(1, 1), activation = "selu"))(h2)
-    flatten_hidden = TimeDistributed(Flatten())(h3)
-    hidden_input = TimeDistributed(Dense(512, activation = 'selu', name = 'flat_to_512')) (flatten_hidden)
-    
+        h2 = TimeDistributed(Convolution2D(64, (4, 4), strides=(2, 2), activation = "selu"))(h1)
+        h3 = TimeDistributed(Convolution2D(64, (3, 3), strides=(1, 1), activation = "selu"))(h2)
+        flatten_hidden = TimeDistributed(Flatten())(h3)
+        hidden_input = TimeDistributed(Dense(512, activation = 'selu', name = 'flat_to_512')) (flatten_hidden)
+        
 
-    #Bidrection for a_fc(s,a) and v_fc layer
-    ##################################
-    if 1==1:#args.bidir:
-        value_hidden =Bidirectional(LSTM(512, return_sequences=True,  name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
-        value_hidden_out = Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (value_hidden)
-        action_hidden =Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
-        action_hidden_out = Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (action_hidden)
+        #Bidrection for a_fc(s,a) and v_fc layer
+        ##################################
+        if 1==1:#args.bidir:
+            value_hidden =Bidirectional(LSTM(512,activation =  "selu", return_sequences=True,  name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+            value_hidden_out = Bidirectional(LSTM(512,activation =  "selu",  return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (value_hidden)
+            action_hidden =Bidirectional(LSTM(512,activation =  "selu",  return_sequences=True,  name = 'action_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+            action_hidden_out = Bidirectional(LSTM(512,activation =  "selu",  return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (action_hidden)
 
-    else:
-         value_hidden_out = LSTM(512, return_sequences=True, stateful=False, input_shape=(10, 512)) (hidden_input)
-         action_hidden_out = LSTM(512, return_sequences=True, stateful=False, input_shape=(10, 512)) (hidden_input)
-    
-    value = TimeDistributed(Dense(1, name = "value"))(value_hidden_out)
-    action = TimeDistributed(Dense(num_actions, name = "action"))(action_hidden_out)
-    
-    attention_vs = TimeDistributed(Dense(1, activation='tanh'),name = "AVS")(value) 
-    attention_vs = Flatten()(attention_vs)
-    attention_vs = Activation('softmax')(attention_vs)
-    attention_vs = RepeatVector(1)(attention_vs)
-    attention_vs = Permute([2, 1])(attention_vs)
-    sent_representation_vs = multiply([value, attention_vs])
+        else:
+             value_hidden_out = LSTM(512, return_sequences=True, stateful=False, input_shape=(10, 512)) (hidden_input)
+             action_hidden_out = LSTM(512, return_sequences=True, stateful=False, input_shape=(10, 512)) (hidden_input)
+        
+        value = TimeDistributed(Dense(1, name = "value"))(value_hidden_out)
+        action = TimeDistributed(Dense(num_actions, name = "action"))(action_hidden_out)
+        
+        attention_vs = TimeDistributed(Dense(1, activation='tanh'),name = "AVS")(value) 
+        attention_vs = Flatten()(attention_vs)
+        attention_vs = Activation('softmax')(attention_vs)
+        attention_vs = RepeatVector(1)(attention_vs)
+        attention_vs = Permute([2, 1])(attention_vs)
+        sent_representation_vs = multiply([value, attention_vs])
 
-    attention_pol = TimeDistributed(Dense(1, activation='tanh'),name = "AAS")(action) 
-    attention_pol = Flatten()(attention_pol)
-    attention_pol = Activation('softmax')(attention_pol)
-    attention_pol = RepeatVector(num_actions)(attention_pol)
-    attention_pol = Permute([2, 1])(attention_pol)
-    sent_representation_policy = multiply([action, attention_pol])
+        attention_pol = TimeDistributed(Dense(1, activation='tanh'),name = "AAS")(action) 
+        attention_pol = Flatten()(attention_pol)
+        attention_pol = Activation('softmax')(attention_pol)
+        attention_pol = RepeatVector(num_actions)(attention_pol)
+        attention_pol = Permute([2, 1])(attention_pol)
+        sent_representation_policy = multiply([action, attention_pol])
 
-    value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
-    context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
-    policy = Dense(num_actions, activation='softmax', name='policy')(context_policy)
+        value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
+        context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
+        policy = Dense(num_actions, activation='softmax', name='policy')(context_policy)
 
 
-    value_network = Model(input=input_data, output=value)
-    policy_network = Model(input=input_data, output=policy)
+        value_network = Model(input=input_data, output=value)
+        policy_network = Model(input=input_data, output=policy)
 
-    adventage = Input(shape=(1,))
-    train_network = Model(input=[input_data, adventage], output=[value, policy])
+        adventage = Input(shape=(1,))
+        train_network = Model(input=[input_data, adventage], output=[value, policy])
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
     return value_network, policy_network, train_network, adventage
 
 
@@ -137,16 +142,38 @@ def value_loss():
     from keras import backend as K
 
     def loss(y_true, y_pred):
-        return 0.5 * K.sum(K.square(y_true - y_pred))
+        return 0.5 * K.mean(K.square(y_true - y_pred))
 
     return loss
+
+
+def huber_loss_wrapper(**huber_loss_kwargs):
+    def huber_loss_wrapped_function(y_true, y_pred):
+        return K.mean(huber_loss(y_true, y_pred, **huber_loss_kwargs))
+    return huber_loss_wrapped_function
+
+#def huber_loss():
+#    from keras import backend as K
+
+#    def loss(y_true, y_pred, clip_delta=1.0):
+#        error = y_true - y_pred
+#        cond  = K.abs(error) < clip_delta#
+
+#        squared_loss = 0.5 * K.square(error)
+#        linear_loss  = clip_delta * (K.abs(error) - 0.5 * clip_delta)
+        #loss=np.array(tf.where(cond, squared_loss, linear_loss))
+#        print(np.array(tf.where(cond, squared_loss, linear_loss)))
+#        return tf.where(cond, squared_loss, linear_loss)
+
+
+
 
 
 # -----
 
 class LearningAgent(object):
     def __init__(self, action_space, batch_size=32, screen=(84, 84), swap_freq=200):
-        from keras.optimizers import RMSprop		
+        from keras.optimizers import RMSprop, Adam	
         # -----
         self.screen = screen
         self.input_depth = 1
@@ -156,9 +183,10 @@ class LearningAgent(object):
 
         _, _, self.train_net, adventage = build_network((84,84,10),action_space.n)#self.observation_shape, action_space.n)
 
-        self.train_net.compile(optimizer=optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999),
-                               loss=[tf.keras.losses.Huber(), policy_loss(adventage, args.beta)])
 
+        self.train_net.compile(optimizer=Adam(lr=0.0001),#optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999),
+                               loss=[huber_loss_wrapper(),'categorical_crossentropy'])# policy_loss(adventage, args.beta)])#tf.keras.losses.Huber(), policy_loss(adventage, args.beta)])
+        
         self.pol_loss = deque(maxlen=25)
         self.val_loss = deque(maxlen=25)
         self.values = deque(maxlen=25)
@@ -169,7 +197,7 @@ class LearningAgent(object):
         self.targets = np.zeros((self.batch_size, action_space.n))
         self.counter = 0
 
-    def learn(self, last_observations, actions, rewards, learning_rate=0.001):
+    def learn(self, last_observations, actions, rewards, learning_rate=0.0001):
         import keras.backend as K
         K.set_value(self.train_net.optimizer.lr, learning_rate)
         frames = len(last_observations)
@@ -189,15 +217,15 @@ class LearningAgent(object):
         self.entropy.append(entropy)
         self.values.append(np.mean(values))
         min_val, max_val, avg_val = min(self.values), max(self.values), np.mean(self.values)
-        #print('\rFrames: %8d; Policy-Loss: %10.6f; Avg: %10.6f '
-        #      '--- Value-Loss: %10.6f; Avg: %10.6f '
-        #      '--- Entropy: %7.6f; Avg: %7.6f '
-        #      '--- V-value; Min: %6.3f; Max: %6.3f; Avg: %6.3f' % (
-        #          self.counter,
-        #          loss[2], np.mean(self.pol_loss),
-        #          loss[1], np.mean(self.val_loss),
-        #          entropy, np.mean(self.entropy),
-        #          min_val, max_val, avg_val), end='')
+        print('\rFrames: %8d; Policy-Loss: %10.6f; Avg: %10.6f '
+              '--- Value-Loss: %10.6f; Avg: %10.6f '
+              '--- Entropy: %7.6f; Avg: %7.6f '
+              '--- V-value; Min: %6.3f; Max: %6.3f; Avg: %6.3f' % (
+                  self.counter,
+                  loss[2], np.mean(self.pol_loss),
+                  loss[1], np.mean(self.val_loss),
+                  entropy, np.mean(self.entropy),
+                  min_val, max_val, avg_val), end='')
         # -----
         self.swap_counter -= frames
         if self.swap_counter < 0:
@@ -409,7 +437,7 @@ def main():
     mem_queue = manager.Queue(args.queue_size)
 
     pool = Pool(args.processes + 1, init_worker)
-    #frame=np.zeros((84,84,10))
+    frame=np.zeros((84,84,10))
     #print(pool.map(build_network(frame.shape,18), range(1)))
     try:
         for i in range(args.processes):
