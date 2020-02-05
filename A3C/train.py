@@ -82,9 +82,9 @@ def build_network(input_shape, num_actions):
     #Bidrection for a_fc(s,a) and v_fc layer
     ##################################
     if 1==1:#args.bidir:
-        value_hidden =Bidirectional(LSTM(512, return_sequences=True,  name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
-        value_hidden_out = Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (value_hidden)
-        action_hidden =Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+        value_hidden =Bidirectional(LSTM(512, return_sequences=True, name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+        value_hidden_out = Bidirectional(LSTM(512, return_sequences=True, name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (value_hidden)
+        action_hidden =Bidirectional(LSTM(512, return_sequences=True,name = 'action_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
         action_hidden_out = Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (action_hidden)
 
     else:
@@ -187,15 +187,15 @@ class LearningAgent(object):
         self.entropy.append(entropy)
         self.values.append(np.mean(values))
         min_val, max_val, avg_val = min(self.values), max(self.values), np.mean(self.values)
-        #print('\rFrames: %8d; Policy-Loss: %10.6f; Avg: %10.6f '
-        #      '--- Value-Loss: %10.6f; Avg: %10.6f '
-        #      '--- Entropy: %7.6f; Avg: %7.6f '
-        #      '--- V-value; Min: %6.3f; Max: %6.3f; Avg: %6.3f' % (
-        #          self.counter,
-        #          loss[2], np.mean(self.pol_loss),
-        #          loss[1], np.mean(self.val_loss),
-        #          entropy, np.mean(self.entropy),
-        #          min_val, max_val, avg_val), end='')
+        print('\rFrames: %8d; Policy-Loss: %10.6f; Avg: %10.6f '
+              '--- Value-Loss: %10.6f; Avg: %10.6f '
+              '--- Entropy: %7.6f; Avg: %7.6f '
+              '--- V-value; Min: %6.3f; Max: %6.3f; Avg: %6.3f' % (
+                  self.counter,
+                  loss[2], np.mean(self.pol_loss),
+                  loss[1], np.mean(self.val_loss),
+                  entropy, np.mean(self.entropy),
+                  min_val, max_val, avg_val), end='')
         # -----
         self.swap_counter -= frames
         if self.swap_counter < 0:
