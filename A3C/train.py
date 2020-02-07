@@ -65,14 +65,15 @@ def build_network(input_shape, num_actions):
 
 #-------------------------------------------------------------------------
     input_data = Input(shape = input_shape, name = "input")
+
     
     print('>>>> Defining Recurrent Modules...')
     input_data_expanded = Reshape((input_shape[0], input_shape[1], input_shape[2], 1), input_shape = input_shape) (input_data)
     input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
+
     
     h1 = TimeDistributed(Convolution2D(32, 8, 8, subsample=(4, 4), activation = "relu"), \
         input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_TimeDistributed)
-
     h2 = TimeDistributed(Convolution2D(64, 4, 4, subsample=(2, 2), activation = "relu"))(h1)
     h3 = TimeDistributed(Convolution2D(64, 3, 3, subsample=(1, 1), activation = "relu"))(h2)
     flatten_hidden = TimeDistributed(Flatten())(h3)
@@ -149,12 +150,12 @@ class LearningAgent(object):
         self.screen = screen
         self.input_depth = 1
         self.past_range = 10
-        self.observation_shape = (self.input_depth * self.past_range,) + self.screen
+        self.observation_shape = self.screen + (self.input_depth * self.past_range,) 
         self.batch_size = batch_size
 
-        _, _, self.train_net, adventage = build_network((84,84,10),action_space.n)#self.observation_shape, action_space.n)
+        _, _, self.train_net, adventage = build_network(self.observation_shape, action_space.n)
 
-        self.train_net.compile(optimizer=RMSprop(epsilon=0.1, rho=0.99),
+        self.train_net.compile(optimizer=Adam(lr=0.0001),#RMSprop(epsilon=0.1, rho=0.99),
                                loss=[value_loss(), policy_loss(adventage, args.beta)])
 
         self.pol_loss = deque(maxlen=25)
@@ -173,8 +174,9 @@ class LearningAgent(object):
         frames = len(last_observations)
         self.counter += frames
         # -----
-        last_observations=last_observations.reshape((20,84,84,10))
-        values, policy = self.train_net.predict([last_observations, self.unroll])
+        #last_observations=last_observations.reshape((20,84,84,10))
+        print(self.unroll.shape)
+        values, policy = self.train_net.predict([last_observations[...], self.unroll])
         # -----
         self.targets.fill(0.)
         adventage = rewards - values.flatten()
@@ -263,11 +265,12 @@ class ActingAgent(object):
         self.screen = screen
         self.input_depth = 1
         self.past_range = 10
-        self.observation_shape = (self.input_depth * self.past_range,) + self.screen
-        self.value_net, self.policy_net, self.load_net, adv = build_network((84,84,10), action_space.n)
-        self.value_net.compile(optimizer='rmsprop', loss='mse')
-        self.policy_net.compile(optimizer='rmsprop', loss='categorical_crossentropy')
-        self.load_net.compile(optimizer='rmsprop', loss='mse', loss_weights=[0.5, 1.])  # dummy loss
+        self.observation_shape = self.screen + (self.input_depth * self.past_range,) 
+        print(self.observation_shape)
+        self.value_net, self.policy_net, self.load_net, adv = build_network(self.observation_shape, action_space.n)
+        self.value_net.compile(optimizer=Adam(lr=0.0001), loss='mse')
+        self.policy_net.compile(optimizer=Adam(lr=0.0001), loss='categorical_crossentropy')
+        self.load_net.compile(optimizer=Adam(lr=0.0001), loss='mse', loss_weights=[0.5, 1.])  # dummy loss
         self.action_space = action_space
         self.observations = np.zeros(self.observation_shape)
         self.last_observations = np.zeros_like(self.observations)
@@ -282,8 +285,8 @@ class ActingAgent(object):
 
     def init_episode(self, observation):
 
-        #for i in range(self.past_range):
-        self.save_observation(observation)
+        for i in range(self.past_range):
+            self.save_observation(observation)
 
     def reset(self):
         self.counter = 0
@@ -296,7 +299,8 @@ class ActingAgent(object):
         reward = np.clip(reward, -1., 1.)
         # reward /= args.reward_scale
         # -----
-        self.n_step_observations.appendleft(self.last_observations)
+        self.n_step_observations.appendleft(self
+            .last_observations)
         self.n_step_actions.appendleft(action)
         self.n_step_rewards.appendleft(reward)
         # -----
@@ -305,24 +309,24 @@ class ActingAgent(object):
             
             r = 0.
             if not terminal:
-                reshaped_observation=self.observations.reshape((1,84,84,10))
-                r = self.value_net.predict(reshaped_observation)[0]
+                #reshaped_observation=self.observations.reshape((84,84,10))
+                #reshaped_observation=reshaped_observation[None, ...]
+                r = self.value_net.predict(self.observations[None, ...])[0]
             for i in range(self.counter):
                 r = self.n_step_rewards[i] + self.discount * r
                 mem_queue.put((self.n_step_observations[i], self.n_step_actions[i], r))
             self.reset()
 
     def choose_action(self):
-        reshaped_observation=self.observations.reshape((1,84,84,10))
-        policy = self.policy_net.predict(reshaped_observation)[0]
-
+        #reshaped_observation=self.observations.reshape((84,84,10))
+        #reshaped_observation=self.observations[None, ...]
+        policy = self.policy_net.predict(self.observations[None, ...])[0]
         return np.random.choice(np.arange(self.action_space.n), p=policy)
 
     def save_observation(self, observation):
-        
         self.last_observations = self.observations[...]
-        self.observations = np.roll(self.observations, -self.input_depth, axis=0)
-        self.observations[-self.input_depth:, ...] = self.transform_screen(observation)
+        self.observations = np.roll(self.observations, -self.input_depth, axis=2)
+        self.observations[...,-self.input_depth] = self.transform_screen(observation)
         #self.observations =self.observations.reshape(())
 
     def transform_screen(self, data):
@@ -362,7 +366,6 @@ def generate_experience_proc(mem_queue, weight_dict, no):
             episode_reward = 0
             op_last, op_count = 0, 0
             observation = env.reset()
-            
             agent.init_episode(observation)
             
 
@@ -422,4 +425,6 @@ def main():
 
 
 if __name__ == "__main__":
+    import sys
+    np.set_printoptions(threshold=sys.maxsize)
     main()
