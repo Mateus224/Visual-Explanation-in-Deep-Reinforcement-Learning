@@ -12,14 +12,14 @@ I Introduce a new model of an off-policy Network which performe better then the 
 - [X] DQN
 - [x] DDQN
 - [x] Dueling DDQN
-- [ ] LSTM DQN
-- [ ] Bidirectional LSTM DQN
+- [X] LSTM DQN
+- [X] Bidirectional LSTM DQN
 - [X] Attention LSTM DQN
 - [X] Splitted Attention LSTM DQN
 
 [on Policy algorithms:]
 - [X] A3C
-- [ ] A3C Bidirectional LSTM
+- [X] A3C Bidirectional LSTM with Attention Network
 
 # Visualization Techniques:
 
