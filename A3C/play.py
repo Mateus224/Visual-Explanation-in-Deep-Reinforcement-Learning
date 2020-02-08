@@ -64,7 +64,8 @@ def build_network(input_shape, num_actions):
     attention_pol = Permute([2, 1])(attention_pol)
     sent_representation_policy =merge([action, attention_pol], mode='mul',name = "Attention P")
 
-    value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
+    context_value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
+    value = Dense(num_actions, activation='softmax', name='policy')(context_value)
     context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
     policy = Dense(num_actions, activation='softmax', name='policy')(context_policy)
 
@@ -74,6 +75,7 @@ def build_network(input_shape, num_actions):
 
     adventage = Input(shape=(1,))
     train_network = Model(input=[input_data, adventage], output=[value, policy])
+
     return value_network, policy_network, train_network, adventage
 
 
@@ -106,7 +108,7 @@ class ActingAgent(object):
         return np.random.choice(np.arange(self.action_space.n), p=policy)
 
     def save_observation(self, observation):
-
+        
         self.observations = np.roll(self.observations, -self.input_depth, axis=0)
         self.observations[-self.input_depth:, ...] = self.transform_screen(observation)
 

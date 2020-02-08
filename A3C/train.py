@@ -69,11 +69,11 @@ def build_network(input_shape, num_actions):
     
     print('>>>> Defining Recurrent Modules...')
     input_data_expanded = Reshape((input_shape[0], input_shape[1], input_shape[2], 1), input_shape = input_shape) (input_data)
-    input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
+    #input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
 
     
     h1 = TimeDistributed(Convolution2D(32, 8, 8, subsample=(4, 4), activation = "relu"), \
-        input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_TimeDistributed)
+        input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_expanded)
     h2 = TimeDistributed(Convolution2D(64, 4, 4, subsample=(2, 2), activation = "relu"))(h1)
     h3 = TimeDistributed(Convolution2D(64, 3, 3, subsample=(1, 1), activation = "relu"))(h2)
     flatten_hidden = TimeDistributed(Flatten())(h3)
@@ -109,9 +109,12 @@ def build_network(input_shape, num_actions):
     attention_pol = Permute([2, 1])(attention_pol)
     sent_representation_policy =merge([action, attention_pol], mode='mul',name = "Attention P")
 
-    value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
+
+    context_value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
+    value = Dense(1, activation='linear', name='value')(context_value)
     context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
-    policy = Dense(num_actions, activation='softmax', name='policy')(context_policy)
+    con_policy =Dense(num_actions, activation='relu')(context_policy)
+    policy = Dense(num_actions, activation='softmax', name='policy')(con_policy)
 
 
     value_network = Model(input=input_data, output=value)
@@ -120,6 +123,7 @@ def build_network(input_shape, num_actions):
     adventage = Input(shape=(1,))
     train_network = Model(input=[input_data, adventage], output=[value, policy])
     return value_network, policy_network, train_network, adventage
+
 
 
 def policy_loss(adventage=0., beta=0.01):
@@ -141,16 +145,15 @@ def value_loss():
     return loss
 
 
-# -----
 
 class LearningAgent(object):
     def __init__(self, action_space, batch_size=32, screen=(84, 84), swap_freq=200):
-        from keras.optimizers import RMSprop		
+        from keras.optimizers import RMSprop        
         # -----
         self.screen = screen
         self.input_depth = 1
         self.past_range = 10
-        self.observation_shape = self.screen + (self.input_depth * self.past_range,) 
+        self.observation_shape = (self.input_depth * self.past_range,) + self.screen
         self.batch_size = batch_size
 
         _, _, self.train_net, adventage = build_network(self.observation_shape, action_space.n)
@@ -175,8 +178,7 @@ class LearningAgent(object):
         self.counter += frames
         # -----
         #last_observations=last_observations.reshape((20,84,84,10))
-        print(self.unroll.shape)
-        values, policy = self.train_net.predict([last_observations[...], self.unroll])
+        values, policy = self.train_net.predict([last_observations, self.unroll])
         # -----
         self.targets.fill(0.)
         adventage = rewards - values.flatten()
@@ -265,8 +267,7 @@ class ActingAgent(object):
         self.screen = screen
         self.input_depth = 1
         self.past_range = 10
-        self.observation_shape = self.screen + (self.input_depth * self.past_range,) 
-        print(self.observation_shape)
+        self.observation_shape = (self.input_depth * self.past_range,) + self.screen
         self.value_net, self.policy_net, self.load_net, adv = build_network(self.observation_shape, action_space.n)
         self.value_net.compile(optimizer=Adam(lr=0.0001), loss='mse')
         self.policy_net.compile(optimizer=Adam(lr=0.0001), loss='categorical_crossentropy')
@@ -299,18 +300,14 @@ class ActingAgent(object):
         reward = np.clip(reward, -1., 1.)
         # reward /= args.reward_scale
         # -----
-        self.n_step_observations.appendleft(self
-            .last_observations)
+        self.n_step_observations.appendleft(self.last_observations)
         self.n_step_actions.appendleft(action)
         self.n_step_rewards.appendleft(reward)
         # -----
         self.counter += 1
         if terminal or self.counter >= self.n_step:
-            
             r = 0.
             if not terminal:
-                #reshaped_observation=self.observations.reshape((84,84,10))
-                #reshaped_observation=reshaped_observation[None, ...]
                 r = self.value_net.predict(self.observations[None, ...])[0]
             for i in range(self.counter):
                 r = self.n_step_rewards[i] + self.discount * r
@@ -318,17 +315,14 @@ class ActingAgent(object):
             self.reset()
 
     def choose_action(self):
-        #reshaped_observation=self.observations.reshape((84,84,10))
-        #reshaped_observation=self.observations[None, ...]
         policy = self.policy_net.predict(self.observations[None, ...])[0]
         return np.random.choice(np.arange(self.action_space.n), p=policy)
 
     def save_observation(self, observation):
         self.last_observations = self.observations[...]
-        self.observations = np.roll(self.observations, -self.input_depth, axis=2)
-        self.observations[...,-self.input_depth] = self.transform_screen(observation)
-        #self.observations =self.observations.reshape(())
-
+        self.observations = np.roll(self.observations, -self.input_depth, axis=0)
+        self.observations[-self.input_depth:, ...] = self.transform_screen(observation)
+        
     def transform_screen(self, data):
         return rgb2gray(imresize(data, self.screen))[None, ...]
 
@@ -347,6 +341,7 @@ def generate_experience_proc(mem_queue, weight_dict, no):
         # -----
         env = gym.make(args.game)
         agent = ActingAgent(env.action_space, n_step=args.n_step)
+
         if frames > 0:
             print(' %5d> Loaded weights from file' % (pid,))
             agent.load_net.load_weights('model-%s-%d.h5' % (args.game, frames))
@@ -356,7 +351,7 @@ def generate_experience_proc(mem_queue, weight_dict, no):
                 time.sleep(0.1)
             agent.load_net.set_weights(weight_dict['weights'])
             print(' %5d> Loaded weights from dict' % (pid,))
-        
+
         best_score = 0
         avg_score = deque([0], maxlen=25)
         
@@ -367,13 +362,11 @@ def generate_experience_proc(mem_queue, weight_dict, no):
             op_last, op_count = 0, 0
             observation = env.reset()
             agent.init_episode(observation)
-            
 
             # -----
             while not done:
                 frames += 1
                 action = agent.choose_action()
-                
                 observation, reward, done, _ = env.step(action)
                 episode_reward += reward
                 best_score = max(best_score, episode_reward)
@@ -399,6 +392,7 @@ def generate_experience_proc(mem_queue, weight_dict, no):
         print(e)
         traceback.print_exc()
 
+
 def init_worker():
     import signal
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -410,12 +404,12 @@ def main():
     mem_queue = manager.Queue(args.queue_size)
 
     pool = Pool(args.processes + 1, init_worker)
-    #frame=np.zeros((84,84,10))
-    #print(pool.map(build_network(frame.shape,18), range(1)))
+
     try:
         for i in range(args.processes):
             pool.apply_async(generate_experience_proc, (mem_queue, weight_dict, i))
         pool.apply_async(learn_proc, (mem_queue, weight_dict))
+
         pool.close()
         pool.join()
 
@@ -425,6 +419,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import sys
-    np.set_printoptions(threshold=sys.maxsize)
     main()
