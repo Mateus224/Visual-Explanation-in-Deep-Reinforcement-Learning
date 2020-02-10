@@ -20,15 +20,15 @@ from keras.layers.wrappers import Bidirectional
 
 def build_network(input_shape, num_actions):
     input_data = Input(shape = input_shape, name = "input")
-    
+
     
     print('>>>> Defining Recurrent Modules...')
     input_data_expanded = Reshape((input_shape[0], input_shape[1], input_shape[2], 1), input_shape = input_shape) (input_data)
-    input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
+    #input_data_TimeDistributed = Permute((3, 1, 2, 4), input_shape=input_shape)(input_data_expanded)
+
     
     h1 = TimeDistributed(Convolution2D(32, 8, 8, subsample=(4, 4), activation = "relu"), \
-        input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_TimeDistributed)
-
+        input_shape=(10, input_shape[0], input_shape[1], 1))(input_data_expanded)
     h2 = TimeDistributed(Convolution2D(64, 4, 4, subsample=(2, 2), activation = "relu"))(h1)
     h3 = TimeDistributed(Convolution2D(64, 3, 3, subsample=(1, 1), activation = "relu"))(h2)
     flatten_hidden = TimeDistributed(Flatten())(h3)
@@ -64,10 +64,12 @@ def build_network(input_shape, num_actions):
     attention_pol = Permute([2, 1])(attention_pol)
     sent_representation_policy =merge([action, attention_pol], mode='mul',name = "Attention P")
 
+
     context_value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
-    value = Dense(num_actions, activation='softmax', name='policy')(context_value)
+    value = Dense(1, activation='linear', name='value')(context_value)
     context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
-    policy = Dense(num_actions, activation='softmax', name='policy')(context_policy)
+    con_policy =Dense(num_actions, activation='relu')(context_policy)
+    policy = Dense(num_actions, activation='softmax', name='policy')(con_policy)
 
 
     value_network = Model(input=input_data, output=value)
@@ -75,7 +77,6 @@ def build_network(input_shape, num_actions):
 
     adventage = Input(shape=(1,))
     train_network = Model(input=[input_data, adventage], output=[value, policy])
-
     return value_network, policy_network, train_network, adventage
 
 
@@ -85,11 +86,11 @@ class ActingAgent(object):
         self.input_depth = 1
         self.past_range = 10
         self.replay_size = 32
-        self.observation_shape =  self.screen+(self.input_depth * self.past_range,) 
+        self.observation_shape =  (self.input_depth * self.past_range,)+ self.screen
 
         _, self.policy, self.load_net, _ = build_network(self.observation_shape, action_space.n)
 
-        self.load_net.compile(optimizer=RMSprop(clipnorm=1.), loss='mse')  # clipnorm=1.
+        self.load_net.compile(optimizer=Adam(lr=0.0001), loss='mse')  # clipnorm=1.
 
         self.action_space = action_space
         self.observations = np.zeros((self.input_depth * self.past_range,) + screen)
@@ -100,9 +101,8 @@ class ActingAgent(object):
 
     def choose_action(self, observation):
         self.save_observation(observation)
-        print("hape",self.observations.shape)
         last_observations=self.observations
-        last_observations=last_observations.reshape((84,84,10))
+        #last_observations=last_observations.reshape((84,84,10))
         policy = self.policy.predict(last_observations[None, ...])[0]
         policy /= np.sum(policy)  # numpy, why?
         return np.random.choice(np.arange(self.action_space.n), p=policy)
