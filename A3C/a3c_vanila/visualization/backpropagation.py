@@ -44,13 +44,13 @@ def init_guided_backprop(guided_model, layer_name):
     input_imgs = guided_model.input[0]
     layer_output = guided_model.get_layer(layer_name).output
     grads = K.gradients(layer_output, input_imgs)[0]
-    print(grads)
     backprop_fn = K.function([input_imgs, K.learning_phase()], [grads])
     return backprop_fn
 
 def guided_backprop(frame, backprop_fn):
+    import sys
+    np.set_printoptions(threshold=sys.maxsize)
     """Guided Backpropagation method for visualizing input saliency."""
-    print("asd",frame.shape)
     grads_val = backprop_fn([frame, 0])[0]
     return grads_val
 

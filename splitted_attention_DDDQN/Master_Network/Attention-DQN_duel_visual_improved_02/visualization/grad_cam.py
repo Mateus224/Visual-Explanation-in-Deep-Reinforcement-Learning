@@ -30,9 +30,9 @@ def grad_cam(gradient_function, frame, action):
     
 
     output, grads_val = gradient_function([frame,action])#,[action])
-    #print("grads",grads_val)
+    print("grads",grads_val.shape)
     weights = np.mean(grads_val, axis=(2,3))
-
+    print("grads1",weights.shape)
     weights = weights[0,timestep,:]
     output = output[0,timestep,:,:,:]
     

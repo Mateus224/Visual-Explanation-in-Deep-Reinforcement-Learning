@@ -9,7 +9,7 @@ from visualization.backpropagation import *
 from PIL import Image
 from visualization.grad_cam import *
 
-num_frames=1000
+num_frames=20
 
 def parse():
     parser = argparse.ArgumentParser(description="DQN")

@@ -13,37 +13,43 @@ from tensorflow.python.framework import ops
 timestep=9
 
 
-def init_grad_cam(input_model, layer_name):
+def init_grad_cam(input_model, layer_name, actor=True):
 
     action = K.placeholder(shape=(), dtype=np.int32)
-    print( input_model.output[1].shape)
-    y_c = input_model.output[1][0, action]
+    if(actor):
+        y_c = input_model.output[1][0, action]
+    else:
+        print("output[0]",input_model.output[0].shape)
+        y_c = input_model.output[0][0, action]
     conv_output = input_model.get_layer(layer_name).output
     grads = K.gradients(y_c, conv_output)[0]
     # Normalize if necessary
     #grads = normalize(grads)
-    gradient_function = K.function([input_model.input[0], action], [conv_output, grads])
-
+    if (actor):
+        gradient_function = K.function([input_model.input[0], action], [conv_output, grads])
+    else:
+        gradient_function = K.function([input_model.input[0],action], [conv_output, grads])
     return gradient_function
 
-def grad_cam(gradient_function, frame, action):
+def grad_cam(gradient_function, frame, action, actor=True):
     """GradCAM method for visualizing input saliency."""
     
-
-    output, grads_val = gradient_function([frame,action])#,[action])
+    if(actor):
+        output, grads_val = gradient_function([frame,action])#,[action])
+    else:
+        output, grads_val = gradient_function([frame,0])
     #print("out",output)
-    print("grads",grads_val.shape)
-    print("grads_val.shape:",grads_val.shape)
-    weights = np.mean(grads_val, axis=(2,3))
-    print("grads_val.shape:",grads_val.shape)
-    weights = weights[0,timestep,:]
-    output = output[0,timestep,:,:,:]
     
+    weights = np.mean(grads_val, axis=(2,3))
+    
+    weights = weights[0,:]
+    output = output[0,:,:,:]
+
     #weights = np.expand_dims(weights, axis=0)
     #cam = np.dot(output, weights)
     cam = np.zeros((20,20))
     for i in range(weights.shape[0]):
-        cam += weights[i] * output[ :, : , i]
+        cam += weights[i] * output[ i, : , :]
 
 
     #print(cam_.shape)

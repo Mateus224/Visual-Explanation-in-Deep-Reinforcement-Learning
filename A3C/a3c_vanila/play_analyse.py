@@ -11,6 +11,8 @@ from PIL import Image
 from visualization.grad_cam import *
 #import visualization.grad_cam.py
 
+num_frames=2000
+
 
 def build_network(input_shape, output_shape):
     input_data = Input(shape = input_shape, name = "input")
@@ -49,7 +51,7 @@ def parse():
     return args
 
 
-def init_saliency_map(args, agent, history, first_frame=0, num_frames=1000, prefix='QF_', resolution=75, save_dir='./movies/', env_name='Breakout-v0'):
+def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=75, save_dir='./movies/', env_name='Breakout-v0'):
 
     _, policy_model, load_model_guided ,_= build_network(agent.observation_shape, agent.action_space_n)
     _, policy_model,load_model_grad_cam,_ = build_network(agent.observation_shape, agent.action_space_n)
@@ -58,13 +60,11 @@ def init_saliency_map(args, agent, history, first_frame=0, num_frames=1000, pref
     load_model_grad_cam.load_weights(args.load_network_path)
     frame_1= np.zeros((84, 84))
     total_frames=len(history['state'])
-    backprop_fn = init_guided_backprop(load_model_guided,"dense_6")
-    gradient_fn = init_grad_cam(load_model_grad_cam, "convolution2d_9")
-    if args.duel_visual:
-        backprop_fn_advatage = init_guided_backprop(visualization_network_model,"Attention V")
-        fig_array = np.zeros((2,2,num_frames,84,84,3))
-    else:
-        fig_array = np.zeros((1,2,num_frames,84,84,3))
+    backprop_actor = init_guided_backprop(load_model_guided,"dense_6")
+    backprop_critic = init_guided_backprop(load_model_guided,"dense_5")
+    gradCAM_actor = init_grad_cam(load_model_grad_cam, "convolution2d_7")
+    gradCAM_critic = init_grad_cam(load_model_grad_cam, "convolution2d_7", False)
+    fig_array = np.zeros((2,2,num_frames,84,84,3))
     for i in range(num_frames):#total_frames): #num_frames
         ix = first_frame+i
         if ix < total_frames: # prevent loop from trying to process a frame ix greater than rollout length
@@ -73,16 +73,30 @@ def init_saliency_map(args, agent, history, first_frame=0, num_frames=1000, pref
             frame = np.expand_dims(frame, axis=0)
             if ix%10==0:
                 print(ix)
-            #gbp_heatmap = guided_backprop(frame, backprop_fn)
-            gradCam_heatmap = grad_cam(gradient_fn, frame, action)
+            actor_gbp_heatmap = guided_backprop(frame, backprop_actor)
             gradCam_heatmap = np.asarray(gradCam_heatmap)
-            history['cam'].append(gradCam_heatmap)
-            if args.duel_visual:
-                gbp_heatmap = guided_backprop(frame, backprop_fn_advatage)
-                history['gradients_duel_adv'].append(gbp_heatmap)
-    history_grad = history['gradients'].copy()
-    history_cam = history['cam'].copy()
-    fig_array[0,0],fig_array[0,1] = normalization(history_cam, history, "cam")
+            history['gdb_actor'].append(gradCam_heatmap)
+            
+            critic_gbp_heatmap = guided_backprop(frame, backprop_critic)
+            gradCam_heatmap = np.asarray(gradCam_heatmap)
+            history['gdb_actor'].append(gradCam_heatmap)
+
+            gradCam_heatmap = grad_cam(gradCAM_actor, frame, action)
+            gradCam_heatmap = np.asarray(gradCam_heatmap)
+            history['cam_actor'].append(gradCam_heatmap)
+
+            gradCam_heatmap = grad_cam(gradCAM_critic, frame, action, False)
+            gradCam_heatmap = np.asarray(gradCam_heatmap)
+            history['cam_critic'].append(gradCam_heatmap)            
+
+
+    #history_grad = history['gradients'].copy()
+    history_cam_actor = history['cam_actor'].copy()
+    history_cam_critic = history['cam_critic'].copy()
+    fig_array[0,0],_ = normalization(history_cam_actor, history, "cam")
+    fig_array[0,1],_ = normalization(history_cam_critic, history, 'cam')
+    fig_array[1,0],_ = normalization(history_cam_actor, history, "gdb")
+    fig_array[1,1],_ = normalization(history_cam_critic, history, 'gdb')
     if args.duel_visual:
         history_grad_adv=history['gradients_duel_adv'].copy()
         fig_array[1,0],fig_array[1,1] = normalization(history_grad_adv, history, "gdb")
@@ -93,20 +107,24 @@ def init_saliency_map(args, agent, history, first_frame=0, num_frames=1000, pref
 
 def normalization(heatmap, history, visu):
     heatmap=np.asarray(heatmap)
+    print("AA")
     if visu=='gdb':
         heatmap = heatmap[:,0,:,:,:]
         #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
         heatmap-= heatmap.mean() 
         heatmap/= (heatmap.std() + 1e-5) #
-        heatmap*= 0.1 
+        heatmap*= 50# 0.1 
+        print("shape:",heatmap.shape)
 
 
         # clip to [0, 1]
         #gbp_heatmap += 0.5
         heatmap = np.clip(heatmap, -1, 1)
-        heatmap_pic1 = heatmap[:,0,:,:,9]
-        heatmap_pic2 = heatmap[:,0,:,:,0]
+        heatmap_pic1 = heatmap[:,0,:,:]
+        #print(heatmap_pic1)
+        heatmap_pic2 = heatmap[:,0,:,:]
     if visu=='cam':
+        print("cam shape:",heatmap.shape)
         #print(heatmap.shape)
         #heatmap = heatmap[:,0,:,:,:]
         #heatmap-= heatmap.mean() 
@@ -167,19 +185,20 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
     writer = FFMpegWriter(fps=8, metadata=metadata)
     total_frames = len(history['state'])
     fig = plt.figure(figsize=[6, 6*1.3], dpi=resolution)
+    print("fig_array.shape: ",fig_array.shape)
     with writer.saving(fig, save_dir + movie_title, resolution):
-        for i in range(121):#total_frames): #num_frames
+        for i in range(num_frames):#total_frames): #num_frames
             plotColumns = 2
             plotRows = 1
-            if args.duel_visual:
-                titleList=["V(s; theta, beta)","A(s,a;thata,alpha)"]
+            if (True):
+                titleList=["Actor","Critic"]
                 for j in range(0, plotColumns*plotRows):
-                    img = fig_array[j,i,:,:,:]
+                    img = fig_array[j,0,i,:,:,:]
                     ax=fig.add_subplot(plotRows, plotColumns, j+1)
                     ax.set_xlabel(titleList[j])
                     plt.imshow(img)
             else:
-                plt.imshow(fig_array[0,i,:,:,:]) #if error because no directory that exist
+                plt.imshow(fig_array[0,0,i,:,:,:]) #if error because no directory that exist
             writer.grab_frame() 
             fig.clear()
             if i%100==0:
@@ -189,7 +208,7 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
 
 def play_game(args, agent, env, total_episodes=1):
     
-    history = { 'state': [], 'action': [], 'gradients':[], 'gradients_duel_adv':[],'movie_frames':[]}
+    history = { 'state': [], 'un_proc_state' : [], 'action': [], 'gradients':[], 'cam_actor':[],'cam_critic':[], 'gradients_duel_adv':[],'movie_frames':[]}
     rewards = []
     agent.load_net.load_weights(args.load_network_path)
     for i in range(total_episodes):
@@ -200,8 +219,9 @@ def play_game(args, agent, env, total_episodes=1):
         action_state=agent.init_episode(state)
         #playing one game
         #while(not done):
-        for _ in range(121):
+        for _ in range(num_frames):
             history['state'].append(action_state)
+            history['un_proc_state'].append(state)
             action = agent.choose_action(state)
             state, reward, done, info = env.step(action)
             episode_reward += reward
