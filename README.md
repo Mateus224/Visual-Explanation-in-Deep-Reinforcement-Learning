@@ -1,11 +1,6 @@
 ## Visual-Explanation-in-Deep-Reinforcement-Learning-through-Guided-Backpropagation-and-GradCam
 This is the first algorithm which visualizes the knowledge of an agent trained by Deep Reinforcement Learning (paper will be published in March) using backpropagation / Guided Backpropagation / GradCam and Guided GradCam. The goal of the work is to  shows why the agent is performing the action. Which pixels had the biggest influence on the decision of the agent.
 
-
-## Splitted Attention DDQN
-I Introduce a new model of an off-policy Network which performe better then the state of the art Attention DQQN
-
-
 # Deep Reinfocement Learning Algorithms:
 
 [off Policy algorithms:]
@@ -29,6 +24,15 @@ I Introduce a new model of an off-policy Network which performe better then the 
 - [X] Guided GradCam
 - [ ] SmoothGrad
 - [ ] Perturbation-based Saliency Map
+
+## Splitted Attention DDQN
+I Introduce a new model of an off-policy Network which performe better then the state of the art Attention DDDQN. This Network has in the input timedistributed convolutional layers after that we splitt the layers into an advatage and a value stream. on the bottom of both we have bidriectional LSTM networks followed with an attention network. On the end we bring both streams together like in the dueling Network.
+
+![Alt text](splitted_attention_DDDQN/Master_Network/Attention-DQN_duel_visual_improved_02/model_plot.png)
+
+
+
+
 
 
 
