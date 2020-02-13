@@ -26,7 +26,8 @@ This is the first algorithm which visualizes the knowledge of an agent trained b
 - [ ] Perturbation-based Saliency Map
 
 ## Splitted Attention DDQN
-I Introduce a new model of an off-policy Network which performe better then the state of the art Attention DDDQN. This Network has in the input timedistributed convolutional layers after that we splitt the layers into an advatage and a value stream. on the bottom of both we have bidriectional LSTM networks followed with an attention network. On the end we bring both streams together like in the dueling Network.
+I Introduce a new model of an off-policy Network which performe better then the state of the art Attention DDDQN (In average this Splitted Attention DDQN Network is making 7-8000 points in the game Seaquest-v0. DDDQN with Attation what I take as Basline the Network made 3-4000 Points). 
+This Network has in the input timedistributed convolutional layers after that we splitt the layers into an advatage and a value stream. on the bottom of both we have bidriectional LSTM networks followed with an attention network. On the end we bring both streams together like in the dueling Network.
 
 ![Alt text](splitted_attention_DDDQN/Master_Network/Attention-DQN_duel_visual_improved_02/model_plot.png)
 
