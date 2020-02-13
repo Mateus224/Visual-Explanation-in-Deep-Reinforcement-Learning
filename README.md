@@ -55,6 +55,9 @@ python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_mod
 ![Alt text](pictures/DuelingNet.png?raw=true "DQN vs. Dueling DQN Network")
 
 # some results
+<video src="/A3C/a3c_vanila/movies/QF_-450-breakout-v0.mp4" width="320" height="200" controls preload></video>
+
+
 Here we can see how the agent is looking more on his position (in the advantage part of the neuronal network [right figure] and how he is looking more on the reward in the value function part of the network [left figure].
 (left value || right advantage)
 ![Alt text](pictures/4.png?raw=true "example with environment")
