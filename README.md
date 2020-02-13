@@ -62,10 +62,9 @@ In this GIF you can see the different visualizations for the A3C algorithm Playi
 Here we can see how the agent is looking more on his position (in the advantage part of the neuronal network [right figure] and how he is looking more on the reward in the value function part of the network [left figure].
 (left value || right advantage)
 ![Alt text](pictures/4.png?raw=true "example with environment")
-![Alt text](pictures/1.png?raw=true "example 1")
-![Alt text](pictures/2.png?raw=true "example 2")
 
-For Attention Networks (Visualization is not working yet):
+
+For Attention Networks:
 
 train:
 ```console
