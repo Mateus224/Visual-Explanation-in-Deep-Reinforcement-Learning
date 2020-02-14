@@ -16,6 +16,9 @@ from keras.layers import (Activation, Convolution2D, Dense, Flatten, Input,
         Permute, merge, Merge,  Lambda, Reshape, TimeDistributed, LSTM, RepeatVector, Permute) #multiply,
 from keras.layers.wrappers import Bidirectional
 from keras.layers.wrappers import Bidirectional
+from visualization.backpropagation import build_guided_model
+
+from play_analyse import play_game
 
 
 def build_network(input_shape, num_actions):
@@ -77,6 +80,7 @@ def build_network(input_shape, num_actions):
 
     adventage = Input(shape=(1,))
     train_network = Model(input=[input_data, adventage], output=[value, policy])
+    print(train_network.summary())
     return value_network, policy_network, train_network, adventage
 
 
@@ -87,10 +91,15 @@ class ActingAgent(object):
         self.past_range = 10
         self.replay_size = 32
         self.observation_shape =  (self.input_depth * self.past_range,)+ self.screen
+        self.action_space_n=action_space.n
 
         _, self.policy, self.load_net, _ = build_network(self.observation_shape, action_space.n)
 
         self.load_net.compile(optimizer=Adam(lr=0.0001), loss='mse')  # clipnorm=1.
+        _, _, self.load_net_guided, _ = build_guided_model(self.observation_shape, action_space.n)
+
+        self.load_net_guided.compile(optimizer=Adam(lr=0.0001), loss='mse')  # clipnorm=1.
+
 
         self.action_space = action_space
         self.observations = np.zeros((self.input_depth * self.past_range,) + screen)
@@ -98,6 +107,7 @@ class ActingAgent(object):
     def init_episode(self, observation):
         for _ in range(self.past_range):
             self.save_observation(observation)
+        return self.observations
 
     def choose_action(self, observation):
         self.save_observation(observation)
@@ -119,7 +129,11 @@ class ActingAgent(object):
 parser = argparse.ArgumentParser(description='Evaluation of model')
 parser.add_argument('--game', default='Breakout-v0', help='Name of openai gym environment', dest='game')
 parser.add_argument('--evaldir', default=None, help='Directory to save evaluation', dest='evaldir')
-parser.add_argument('--load_network_path', help='File with weights for model', dest='model')
+parser.add_argument('--load_network_path',  default='', help='the path to the trained mode file')
+parser.add_argument('--visualize', default=False, action='store_true')
+parser.add_argument('--gbp', default=False, action='store_true', help='visualize what the network learned with Guided backpropagation')
+parser.add_argument('--GradCam', action='store_false', help='visualize what the network learned with GradCam')
+parser.add_argument('--duel_visual',default=False, action='store_true', help='for visualisation of dueling networks')
 
 
 def main():
@@ -130,40 +144,43 @@ def main():
         env.monitor.start(args.evaldir)
     # -----
     agent = ActingAgent(env.action_space)
-
-    model_file = args.model
-
+    model_file = args.load_network_path
     agent.load_net.load_weights(model_file)
+    agent.load_net_guided.load_weights(model_file)
+    if args.visualize:
+        print(">> visualisation mode.")
+        play_game(args, agent, env, total_episodes=1)
+    else:
+        game = 1
+        for _ in range(10):
+            done = False
+            episode_reward = 0
+            noops = 0
 
-    game = 1
-    for _ in range(10):
-        done = False
-        episode_reward = 0
-        noops = 0
-
-        # init game
-        observation = env.reset()
-        agent.init_episode(observation)
-        # play one game
-        print('Game #%8d; ' % (game,), end='')
-        while not done:
-            env.render()
-            action = agent.choose_action(observation)
-            observation, reward, done, _ = env.step(action)
-            episode_reward += reward
-            # ----
-            if action == 0:
-                noops += 1
-            else:
-                noops = 0
-            if noops > 100:
-                break
-        print('Reward %4d; ' % (episode_reward,))
-        game += 1
-    # -----
-    if args.evaldir:
-        env.monitor.close()
+            # init game
+            observation = env.reset()
+            agent.init_episode(observation)
+            # play one game
+            print('Game #%8d; ' % (game,), end='')
+            while not done:
+                env.render()
+                action = agent.choose_action(observation)
+                observation, reward, done, _ = env.step(action)
+                episode_reward += reward
+                # ----
+                if action == 0:
+                    noops += 1
+                else:
+                    noops = 0
+                if noops > 100:
+                    break
+            print('Reward %4d; ' % (episode_reward,))
+            game += 1
+        # -----
+        if args.evaldir:
+            env.monitor.close()
 
 
 if __name__ == "__main__":
     main()
+

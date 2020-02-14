@@ -4,11 +4,15 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 from keras import backend as K
-from keras.preprocessing import image
-from keras import backend as K
-
+from keras.preprocessing import image 
 import tensorflow as tf
 from tensorflow.python.framework import ops
+from .model import build_network
+
+
+
+
+
 
 
 
@@ -25,7 +29,7 @@ def normalize(x):
     return (x + 1e-10) / (K.sqrt(K.mean(K.square(x))) + 1e-10)
 
 
-def build_guided_model(agent):
+def build_guided_model(observation_shape, action_space_n):
     """Function returning modified model.
     
     Changes gradient function for all ReLu activations
@@ -40,7 +44,7 @@ def build_guided_model(agent):
 
     g = K.get_session().graph
     with g.gradient_override_map({'Relu': 'GuidedBackProp'}):
-        return agent.build_network()
+        return build_network(observation_shape, action_space_n)
 
 def init_guided_backprop(guided_model, layer_name):
     input_imgs = guided_model.input[0]
@@ -50,9 +54,12 @@ def init_guided_backprop(guided_model, layer_name):
     return backprop_fn
 
 def guided_backprop(frame, backprop_fn):
+    import sys
+    np.set_printoptions(threshold=sys.maxsize)
     """Guided Backpropagation method for visualizing input saliency."""
     grads_val = backprop_fn([frame, 0])[0]
     return grads_val
+
 
 
 

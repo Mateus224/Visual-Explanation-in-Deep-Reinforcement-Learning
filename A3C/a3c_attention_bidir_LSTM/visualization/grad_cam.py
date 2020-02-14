@@ -17,6 +17,7 @@ def init_grad_cam(input_model, layer_name, actor=True):
 
     action = K.placeholder(shape=(), dtype=np.int32)
     if(actor):
+        print("output[1]",input_model.output[1].shape)
         y_c = input_model.output[1][0, action]
     else:
         print("output[0]",input_model.output[0].shape)
@@ -40,15 +41,16 @@ def grad_cam(gradient_function, frame, action, actor=True):
         output, grads_val = gradient_function([frame,0])
     
     weights = np.mean(grads_val, axis=(2,3))
-    
-    weights = weights[0,:]
-    output = output[0,:,:,:]
+
+    #print("out",output.shape)
+    weights = weights[0,timestep,:]
+    output = output[0,timestep,:,:,:]
 
     #weights = np.expand_dims(weights, axis=0)
     #cam = np.dot(output, weights)
-    cam = np.zeros((20,20))
+    cam = np.zeros((7,7))
     for i in range(weights.shape[0]):
-        cam += weights[i] * output[ i, : , :]
+        cam += weights[i] * output[ :, : , i]
 
 
     #print(cam_.shape)
@@ -58,6 +60,6 @@ def grad_cam(gradient_function, frame, action, actor=True):
     cam_max = cam.max() 
     if cam_max != 0: 
         cam = cam / cam_max
-    
+    #print(cam)
     return cam
 

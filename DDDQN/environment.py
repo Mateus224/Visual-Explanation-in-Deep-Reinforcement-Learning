@@ -3,10 +3,11 @@ import numpy as np
 from atari_wrapper import make_wrap_atari
 
 class Environment(object):
-    def __init__(self, env_name, args, atari_wrapper=False, test=False):
+    def __init__(self, env_name, args, atari_wrapper=False, test=False, frame_stack_and_origin=False):
         if atari_wrapper:
             clip_rewards = not test
-            self.env = make_wrap_atari(env_name, clip_rewards)
+            print("frame_stack_and_origin",frame_stack_and_origin)
+            self.env = make_wrap_atari(env_name, clip_rewards,frame_stack_and_origin)
         else:
             self.env = gym.make(env_name)
 
@@ -34,9 +35,9 @@ class Environment(object):
             observation: np.array
                 current RGB screen of game, shape: (210, 160, 3)
         '''
-        observation = self.env.reset()
+        observation, origin_observation = self.env.reset()
 
-        return np.array(observation)
+        return np.array(observation), np.array(origin_observation)
 
 
     def step(self,action):
@@ -64,9 +65,9 @@ class Environment(object):
         if self.do_render:
             self.env.render()
 
-        observation, reward, done, info = self.env.step(action)
+        observation, origin_observation, reward, done, info = self.env.step(action)
 
-        return np.array(observation), reward, done, info
+        return np.array(observation), np.array(origin_observation), reward, done, info
 
 
     def get_action_space(self):

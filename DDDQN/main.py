@@ -12,7 +12,8 @@ def parse():
     parser.add_argument('--do_render', action='store_true', help='whether render environment')
     parser.add_argument('--gbp', action='store_false', help='visualize what the network learned with Guided backpropagation')
     parser.add_argument('--gradCAM', action='store_false', help='visualize what the network learned with GradCAM')
-    parser.add_argument('--gbp_GradCAM', action='store_false', help='visualize what the network learned with Guided GradCAM')
+    parser.add_argument('--gbp_GradCAM', action='store_true', help='visualize what the network learned with Guided GradCAM')
+    parser.add_argument('--visualize', action='store_true', help='visualize what the network learned with Guided GradCAM')
     try:
         from argument import add_arguments
         parser = add_arguments(parser)
@@ -33,13 +34,15 @@ def run(args):
 
     if args.test_dqn:
         env_name = args.env_name or 'SeaquestNoFrameskip-v0'
-        env = Environment(env_name, args, atari_wrapper=True, test=True)
+        env = Environment(env_name, args, atari_wrapper=True, test=True, frame_stack_and_origin=True)
         from agent_dir.agent_dqn import Agent_DQN
         agent = Agent_DQN(env, args)
         
-        if args.gbp or args.gradCAM or args.gbp_GradCAM:
+        if (args.visualize):
+            print("<< visualization >>\n")
             play_game(args, agent, env, total_episodes=1)
         else:
+            print("<< test >>\n")
             test(agent,env)
 
 

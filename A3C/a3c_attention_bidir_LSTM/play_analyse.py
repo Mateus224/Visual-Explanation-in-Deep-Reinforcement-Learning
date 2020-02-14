@@ -3,7 +3,7 @@ import numpy as np
 #from environment import Environment
 import matplotlib.animation as manimation
 import matplotlib.pyplot as plt
-
+import traceback
 
 from visualization.backpropagation import *
 from PIL import Image
@@ -11,7 +11,7 @@ from visualization.grad_cam import *
 from visualization.model import build_network
 #import visualization.grad_cam.py
 
-num_frames=450
+num_frames=60
 
 
 def parse():
@@ -33,25 +33,23 @@ def parse():
 
 def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=75, save_dir='./movies/', env_name='Breakout-v0'):
 
-    _, _, load_model ,_= build_network(agent.observation_shape, agent.action_space_n)
-    #_, _,load_model_cam,_ = build_network(agent.observation_shape, agent.action_space_n)
-    #_, _, load_model_guided_backprop ,_= build_guided_model(agent.observation_shape, agent.action_space_n)
-    _, _,load_guided_model,_ = build_guided_model(agent.observation_shape, agent.action_space_n)
+    #_, _, load_model ,_= build_network(agent.observation_shape, agent.action_space_n)
+    #_, _,load_guided_model,_ = build_guided_model(agent.observation_shape, agent.action_space_n)
+    print(args.load_network_path)
 
-    load_model.load_weights(args.load_network_path)
-    load_guided_model.load_weights(args.load_network_path)
-    #load_model_guided_backprop.load_weights(args.load_network_path)
-    #load_model_grad_cam.load_weights(args.load_network_path)
-    frame_1= np.zeros((84, 84))
+    #load_model.load_weights(args.load_network_path)
+    #load_guided_model.load_weights(args.load_network_path)
+
+
     total_frames=len(history['state'])
-    backprop_actor = init_guided_backprop(load_model,"dense_6")
-    backprop_critic = init_guided_backprop(load_model,"dense_5")
-    cam_actor = init_grad_cam(load_model, "convolution2d_4")
-    cam_critic = init_grad_cam(load_model, "convolution2d_4", False)
-    guidedBackprop_actor = init_guided_backprop(load_guided_model,"dense_9")
-    guidedBackprop_critic = init_guided_backprop(load_guided_model,"dense_8")
-    gradCAM_actor = init_grad_cam(load_guided_model, "convolution2d_7")
-    gradCAM_critic = init_grad_cam(load_guided_model, "convolution2d_7", False)
+    backprop_actor = init_guided_backprop(agent.load_net,"timedistributed_5")
+    backprop_critic = init_guided_backprop(agent.load_net,"timedistributed_5")
+    cam_actor = init_grad_cam(agent.load_net, "timedistributed_3")
+    cam_critic = init_grad_cam(agent.load_net, "timedistributed_3", False)
+    guidedBackprop_actor = init_guided_backprop(agent.load_net_guided,"timedistributed_12")
+    guidedBackprop_critic = init_guided_backprop(agent.load_net_guided,"timedistributed_12")
+    gradCAM_actor = init_grad_cam(agent.load_net_guided, "timedistributed_10")
+    gradCAM_critic = init_grad_cam(agent.load_net_guided, "timedistributed_10", False)
     fig_array = np.zeros((4,2,num_frames,84,84,3))
     for i in range(num_frames):#total_frames): #num_frames
         ix = first_frame+i
@@ -65,6 +63,8 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
             actor_gbp_heatmap = guided_backprop(frame, backprop_actor)
             actor_gbp_heatmap = np.asarray(actor_gbp_heatmap)
             history['gradients_actor'].append(actor_gbp_heatmap)
+
+            #print(np.array(frame))
 
             actor_gbp_heatmap = guided_backprop(frame, backprop_critic)
             actor_gbp_heatmap = np.asarray(actor_gbp_heatmap)
@@ -105,11 +105,11 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
     history_gdb_critic = history['gdb_critic'].copy()
     history_guidedGradCam_actor = history['guidedGradCam_actor'].copy()
     history_guidedGradCam_critic = history['guidedGradCam_critic'].copy()
-    fig_array[0,0] = normalization(history_gradients_actor, history, "gdb",GDB_actor=1)
+    fig_array[0,0] = normalization(history_gradients_actor, history, "gdb",GDB_actor=0)
     fig_array[0,1] = normalization(history_gradients_critic, history, 'gdb')
     fig_array[1,0] = normalization(history_gradCam_actor, history, "cam", )
     fig_array[1,1] = normalization(history_gradCam_critic, history, 'cam')
-    fig_array[2,0] = normalization(history_gdb_actor, history, "gdb", GDB_actor=1)
+    fig_array[2,0] = normalization(history_gdb_actor, history, "gdb", GDB_actor=0)
     fig_array[2,1] = normalization(history_gdb_critic, history, 'gdb')
     fig_array[3,0] = normalization(history_guidedGradCam_actor, history, "cam")
     fig_array[3,1] = normalization(history_guidedGradCam_critic, history, 'cam')
@@ -125,7 +125,6 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
 def normalization(heatmap, history, visu, GDB_actor=0):
     heatmap=np.asarray(heatmap)
-    print("AA")
     if visu=='gdb':
         print(heatmap.shape)
         heatmap = heatmap[:,:,:]
@@ -142,8 +141,8 @@ def normalization(heatmap, history, visu, GDB_actor=0):
         # clip to [0, 1]
         #gbp_heatmap += 0.5
         heatmap = np.clip(heatmap, -1, 1)
-        heatmap_pic1 = heatmap[:,0,2,:,:]
-        print("heatmapGdb",heatmap_pic1.shape)
+        print("gdb",heatmap.shape)
+        heatmap_pic1 = heatmap[:,0,9,:,:]
         #save_for_GradCam(heatmap_pic1, 1)
     if visu=='cam':
         
@@ -153,7 +152,7 @@ def normalization(heatmap, history, visu, GDB_actor=0):
         #heatmap/= (heatmap.std() + 1e-5) #
         heatmap*= 1
         heatmap = np.clip(heatmap, 0, 1)
-        
+        print("can",heatmap.shape)
         
         heatmap_pic1 = heatmap[:,:,:]
         print("heatmapCAM",heatmap_pic1.shape)
@@ -207,7 +206,6 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
     writer = FFMpegWriter(fps=8, metadata=metadata)
     total_frames = len(history['state'])
     fig = plt.figure(figsize=[6, 6*1.3], dpi=resolution)
-    print("fig_array.shape: ",fig_array.shape)
     with writer.saving(fig, save_dir + movie_title, resolution):
         titleListX=["Actor","Critic"]
         titleListY=["Backpropagation", "GradCam", "Guided Backpropagation","Guided GeadCam"]
@@ -233,7 +231,8 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
 
 
 def play_game(args, agent, env, total_episodes=1):
-    
+    import sys
+    np.set_printoptions(threshold=sys.maxsize)
     history = { 'state': [], 'un_proc_state' : [], 'action': [], 'gradients_actor':[], 'gradients_critic':[],'gradCam_actor':[],'gradCam_critic':[], 'gdb_actor':[],'gdb_critic':[], 'guidedGradCam_actor':[],'guidedGradCam_critic':[] ,'movie_frames':[]}
     rewards = []
     agent.load_net.load_weights(args.load_network_path)
@@ -257,6 +256,7 @@ def play_game(args, agent, env, total_episodes=1):
         rewards.append(episode_reward)
     print('Run %d episodes'%(total_episodes))
     print('Mean:', np.mean(rewards))
+
     init_saliency_map(args, agent, history)
 
     return history

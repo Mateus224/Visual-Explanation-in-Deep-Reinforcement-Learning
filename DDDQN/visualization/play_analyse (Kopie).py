@@ -11,7 +11,7 @@ from visualization.grad_cam import *
 from visualization.model import build_network
 #import visualization.grad_cam.py
 
-num_frames=30
+num_frames=450
 
 
 def parse():

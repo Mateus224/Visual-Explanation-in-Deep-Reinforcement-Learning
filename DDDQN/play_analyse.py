@@ -1,12 +1,17 @@
 import argparse
 import numpy as np
-from environment import Environment
+#from environment import Environment
 import matplotlib.animation as manimation
 import matplotlib.pyplot as plt
-from agent_dir.agent_dqn import Agent_DQN
+
 
 from visualization.backpropagation import *
+from PIL import Image
+from visualization.grad_cam import *
+from visualization.model import build_network
 #import visualization.grad_cam.py
+
+num_frames=450
 
 
 def parse():
@@ -26,60 +31,173 @@ def parse():
     return args
 
 
-def init_saliency_map(args, agent, history, first_frame=0, num_frames=1000, prefix='QF_', resolution=75, save_dir='./movies/', env_name='Breakout-v0'):
-    visualization_network_model = build_guided_model(agent)
-    visualization_network_model.load_weights(args.test_dqn_model_path)
+def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=75, save_dir='./movies/'):
+
+    _, _, load_model ,_= build_network(agent.observation_shape, agent.action_space_n)
+    #_, _,load_model_cam,_ = build_network(agent.observation_shape, agent.action_space_n)
+    #_, _, load_model_guided_backprop ,_= build_guided_model(agent.observation_shape, agent.action_space_n)
+    _, _,load_guided_model,_ = build_guided_model(agent.observation_shape, agent.action_space_n)
+
+    load_model.load_weights(args.load_network_path)
+    load_guided_model.load_weights(args.load_network_path)
+    #load_model_guided_backprop.load_weights(args.load_network_path)
+    #load_model_grad_cam.load_weights(args.load_network_path)
     frame_1= np.zeros((84, 84))
     total_frames=len(history['state'])
-    backprop_fn = init_guided_backprop(visualization_network_model,"dense_12")
-    if args.dueling:
-        backprop_fn_advatage = init_guided_backprop(visualization_network_model,"dense_10")
-        fig_array = np.zeros((2,600,84,84,3))
-    else:
-        fig_array = np.zeros((1,600,84,84,3))
-    print("len: ",total_frames)
-    for i in range(600):#total_frames): #num_frames
+    backprop_actor = init_guided_backprop(load_model,"dense_6")
+    backprop_critic = init_guided_backprop(load_model,"dense_5")
+    cam_actor = init_grad_cam(load_model, "convolution2d_4")
+    cam_critic = init_grad_cam(load_model, "convolution2d_4", False)
+    guidedBackprop_actor = init_guided_backprop(load_guided_model,"dense_9")
+    guidedBackprop_critic = init_guided_backprop(load_guided_model,"dense_8")
+    gradCAM_actor = init_grad_cam(load_guided_model, "convolution2d_7")
+    gradCAM_critic = init_grad_cam(load_guided_model, "convolution2d_7", False)
+    fig_array = np.zeros((4,2,num_frames,84,84,3))
+    for i in range(num_frames):#total_frames): #num_frames
         ix = first_frame+i
         if ix < total_frames: # prevent loop from trying to process a frame ix greater than rollout length
             frame = history['state'][ix].copy()
+            action = history['action'][ix]#.copy()
             frame = np.expand_dims(frame, axis=0)
-            if ix%100==0:
+            if ix%10==0:
                 print(ix)
-            gbp_heatmap = guided_backprop(frame, backprop_fn)
-            #
-            history['gradients'].append(gbp_heatmap)
-            if args.dueling:
-                gbp_heatmap = guided_backprop(frame, backprop_fn_advatage)
-                history['gradients_duel_adv'].append(gbp_heatmap)
-    history_grad=history['gradients'].copy()
-    fig_array[0] = normalization(history_grad, history)
-    if args.dueling:
-        history_grad_adv=history['gradients_duel_adv'].copy()
-        fig_array[1] = normalization(history_grad_adv, history)
+            print(frame.shape)
+
+            actor_gbp_heatmap = guided_backprop(frame, backprop_actor)
+            actor_gbp_heatmap = np.asarray(actor_gbp_heatmap)
+            history['gradients_actor'].append(actor_gbp_heatmap)
+
+            actor_gbp_heatmap = guided_backprop(frame, backprop_critic)
+            actor_gbp_heatmap = np.asarray(actor_gbp_heatmap)
+            history['gradients_critic'].append(actor_gbp_heatmap)
+
+            Cam_heatmap = grad_cam(cam_actor, frame, action)
+            Cam_heatmap = np.asarray(Cam_heatmap)
+            history['gradCam_actor'].append(Cam_heatmap)
+
+            gradCam_heatmap = grad_cam(cam_critic, frame, action, False)
+            gradCam_heatmap = np.asarray(gradCam_heatmap)
+            history['gradCam_critic'].append(gradCam_heatmap)
+
+            actor_gbp_heatmap = guided_backprop(frame, guidedBackprop_actor)
+            actor_gbp_heatmap = np.asarray(actor_gbp_heatmap)
+            history['gdb_actor'].append(actor_gbp_heatmap)
+            
+            critic_gbp_heatmap = guided_backprop(frame, guidedBackprop_critic)
+            critic_gbp_heatmap = np.asarray(critic_gbp_heatmap)
+            history['gdb_critic'].append(critic_gbp_heatmap)
+
+            gradCam_heatmap = grad_cam(gradCAM_actor, frame, action)
+            gradCam_heatmap = np.asarray(Cam_heatmap)
+            history['guidedGradCam_actor'].append(Cam_heatmap)
+
+            gradCam_heatmap = grad_cam(gradCAM_critic, frame, action, False)
+            gradCam_heatmap = np.asarray(gradCam_heatmap)
+            history['guidedGradCam_critic'].append(gradCam_heatmap)
+
+            
+
+
+    history_gradients_actor = history['gradients_actor'].copy()
+    history_gradients_critic = history['gradients_critic'].copy()
+    history_gradCam_actor = history['gradCam_actor'].copy()
+    history_gradCam_critic = history['gradCam_critic'].copy()
+    history_gdb_actor = history['gdb_actor'].copy()
+    history_gdb_critic = history['gdb_critic'].copy()
+    history_guidedGradCam_actor = history['guidedGradCam_actor'].copy()
+    history_guidedGradCam_critic = history['guidedGradCam_critic'].copy()
+    fig_array[0,0] = normalization(history_gradients_actor, history, "gdb",GDB_actor=1)
+    fig_array[0,1] = normalization(history_gradients_critic, history, 'gdb')
+    fig_array[1,0] = normalization(history_gradCam_actor, history, "cam", )
+    fig_array[1,1] = normalization(history_gradCam_critic, history, 'cam')
+    fig_array[2,0] = normalization(history_gdb_actor, history, "gdb", GDB_actor=1)
+    fig_array[2,1] = normalization(history_gdb_critic, history, 'gdb')
+    fig_array[3,0] = normalization(history_guidedGradCam_actor, history, "cam")
+    fig_array[3,1] = normalization(history_guidedGradCam_critic, history, 'cam')
+
     make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name)
 
-def normalization(gbp_heatmap, history):
-    gbp_heatmap=np.asarray(gbp_heatmap)
-    gbp_heatmap=gbp_heatmap[:,0,:,:,:]
-    print(gbp_heatmap.shape)
-    #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
-    gbp_heatmap-= gbp_heatmap.mean() 
-    gbp_heatmap/= (gbp_heatmap.std() + 1e-5) #
-    gbp_heatmap*= 0.1 
-    #frame=frame[0,:,:,0]
-    #print(frame)
+#def normalization_cam(cam_heatmap,history)
 
-    # clip to [0, 1]
-    gbp_heatmap += 0.5
-    gbp_heatmap = np.clip(gbp_heatmap, 0, 1)
-    gbp_heatmap_pic1 = gbp_heatmap[:,:,:,0]
-    gbp_heatmap_pic2 = gbp_heatmap[:,:,:,1]
-    frame = history['state'].copy()
-    frame =np.clip(frame,0,1)
-    frame = frame[:,:,:,0]
-    mixed = np.stack((gbp_heatmap_pic1,gbp_heatmap_pic1, frame), axis=3) 
+
+#def save_for_GradCam(heatmap, gdp=1)
+
+
+
+def normalization(heatmap, history, visu, GDB_actor=0):
+    heatmap=np.asarray(heatmap)
+    print("AA")
+    if visu=='gdb':
+        print(heatmap.shape)
+        heatmap = heatmap[:,:,:]
+        #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
+        heatmap-= heatmap.mean() 
+        heatmap/= (heatmap.std() + 1e-5) #
+        if (GDB_actor):
+            #print(heatmap)
+            heatmap*=50
+        else:
+            heatmap*= 0.1 #0.1 
+
+
+        # clip to [0, 1]
+        #gbp_heatmap += 0.5
+        heatmap = np.clip(heatmap, -1, 1)
+        heatmap_pic1 = heatmap[:,0,2,:,:]
+        print("heatmapGdb",heatmap_pic1.shape)
+        #save_for_GradCam(heatmap_pic1, 1)
+    if visu=='cam':
+        
+        #print(heatmap.shape)
+        #heatmap = heatmap[:,0,:,:,:]
+        #heatmap-= heatmap.mean() 
+        #heatmap/= (heatmap.std() + 1e-5) #
+        heatmap*= 1
+        heatmap = np.clip(heatmap, 0, 1)
+        
+        
+        heatmap_pic1 = heatmap[:,:,:]
+        print("heatmapCAM",heatmap_pic1.shape)
+        #save_for_GradCam(heatmap_pic1)
+
+
+    all_unproc_frames = history['un_proc_state'].copy()
+    frame=np.zeros((num_frames,84,84,3))
+    for i in range(len(all_unproc_frames)):
+        frame[i,:,:,:]=np.asarray(Image.fromarray(all_unproc_frames[i]).resize((84, 84), Image.BILINEAR))/255
+    proc_frame1 = overlap(frame,heatmap_pic1)
+    
+
+    #print(np.asarray(frame))
+    #frame = frame[:,:,:,0]
+    #mixed = np.stack((gbp_heatmap_pic1, frame, gbp_heatmap_pic1), axis=3) 
+    return proc_frame1
+
+
+def overlap(frame,gbp_heatmap):
+    color_neg = [1.0, 0.0, 0.0]
+    color_pos = [0.0, 1.0, 0.0]
+    color_chan = np.ones((num_frames,84,84,2),dtype=gbp_heatmap.dtype)
+    alpha = 0.5
+    #beta = 0.25
+    #gbp_heatmap = np.expand_dims(gbp_heatmap, axis=3)
+    _gbp_heatmap = [gbp_heatmap for _ in range(3)]
+    _gbp_heatmap=np.stack(_gbp_heatmap,axis=3)
+    gbp_heatmap=_gbp_heatmap
+    #gbp_heatmap = np.concatenate((gbp_heatmap,color_chan),axis=3)
+    gbp_heatmap_pos=np.asarray(gbp_heatmap.copy())
+    gbp_heatmap_neg=np.asarray(gbp_heatmap.copy())
+    gbp_heatmap_pos[gbp_heatmap_pos<0.0]=0
+    gbp_heatmap_neg[gbp_heatmap_neg>=0.0]=0
+    gbp_heatmap_neg=-gbp_heatmap_neg
+    gbp_heatmap = color_pos * gbp_heatmap_pos[:,:,:,:] + color_neg * gbp_heatmap_neg[:,:,:,:]
+    #gbp_heatmap = color_pos * gbp_heatmap_pos[:,:,:,:] + color_neg * gbp_heatmap_neg[:,:,:,:]
+    mixed = alpha * gbp_heatmap + (1.0 - alpha) * frame
+    mixed = np.clip(mixed,0,1)
+
+
+
     return mixed
-
     #return mixed
 
 def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name):
@@ -90,47 +208,53 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
     writer = FFMpegWriter(fps=8, metadata=metadata)
     total_frames = len(history['state'])
     fig = plt.figure(figsize=[6, 6*1.3], dpi=resolution)
+    print("fig_array.shape: ",fig_array.shape)
     with writer.saving(fig, save_dir + movie_title, resolution):
-        for i in range(600):#total_frames): #num_frames
-            plotColumns = 2
-            plotRows = 1
-            if args.dueling:
-                titleList=["V(s; theta, beta)","A(s,a;thata,alpha)"]
-                for j in range(0, plotColumns*plotRows):
-                    img = fig_array[j,i,:,:,:]
-                    ax=fig.add_subplot(plotRows, plotColumns, j+1)
-                    ax.set_xlabel(titleList[j])
+        titleListX=["Actor","Critic"]
+        titleListY=["Backpropagation", "GradCam", "Guided Backpropagation","Guided GeadCam"]
+        for i in range(num_frames):#total_frames): #num_frames
+            plotColumns = np.shape(fig_array)[1] #fig_array[0,:,0,0,0,0].shape
+            plotRows = np.shape(fig_array)[0]#fig_array[:,0,0,0,0,0].shape
+            z=0
+            
+            for j in range(0, plotRows):
+                for k in range(0, plotColumns):
+                    img = fig_array[j,k,i,:,:,:]
+                    ax=fig.add_subplot(plotRows, plotColumns, z+1)
+                    ax.set_ylabel(titleListY[j])
+                    ax.set_xlabel(titleListX[k])
                     plt.imshow(img)
-            else:
-                plt.imshow(fig_array[0,i,:,:,:]) 
+                    z=z+1
 
             writer.grab_frame() 
             fig.clear()
             if i%100==0:
                 print(i)
-            
 
 
 
 def play_game(args, agent, env, total_episodes=1):
     
-    history = { 'state': [], 'action': [], 'gradients':[], 'gradients_duel_adv':[],'movie_frames':[]}
+    history = { 'state': [], 'un_proc_state' : [], 'action': [], 'gradients_actor':[], 'gradients_critic':[],'gradCam_actor':[],'gradCam_critic':[], 'gdb_actor':[],'gdb_critic':[], 'guidedGradCam_actor':[],'guidedGradCam_critic':[] ,'movie_frames':[]}
     rewards = []
     for i in range(total_episodes):
-        state = env.reset()
+        state, origin_state = env.reset()
+        print("state:",state.shape)
+        print("orgin_state:",origin_state.shape)
+        prozess_atari_wraper_frames(origin_state, state)
         agent.init_game_setting()
         done = False
         episode_reward = 0.0
 
-        #playing one game
-        #while(not done):
-        for _ in range(800):
-            action = agent.make_action(state, test=True)
+        for _ in range(num_frames):
+            history['state'].append(action_state)
+            history['un_proc_state'].append(state)
+            action = agent.choose_action(state)
             state, reward, done, info = env.step(action)
             episode_reward += reward
-            if args.gbp or args.gradCAM or args.gbp_GradCAM:
-                history['state'].append(state)
-                history['action'].append(action)
+            agent.save_observation(state)
+            action_state=agent.observations
+            history['action'].append(action)
         rewards.append(episode_reward)
     print('Run %d episodes'%(total_episodes))
     print('Mean:', np.mean(rewards))
@@ -139,10 +263,34 @@ def play_game(args, agent, env, total_episodes=1):
     return history
 
 
+def prozess_atari_wraper_frames(origin_state, state):
+    new_frame=state.reshape(210,160,4,3)
+    new_frame=np.moveaxis(new_frame, 0,-2)
+    new_frame=np.moveaxis(new_frame, 0,-2)
+    print("new_frame",new_frame.shape)
+    FFMpegWriter = manimation.writers['ffmpeg']
+    metadata = dict(title='test', artist='mateus', comment='atari-video')
+    writer = FFMpegWriter(fps=8)
+    total_frames = 4
+    fig = plt.figure(figsize=[6, 6*1.3], dpi=75)
+    with writer.saving(fig, "test.mp4", 75):
+        for i in range(4):#total_frames): #num_frames
+
+            img = new_frame[i,:,:,:]
+            plt.imshow(img)
+
+            writer.grab_frame() 
+            fig.clear()
+            if i%100==0:
+                print(i)
+
+
 def test(agent, env, total_episodes=30):
     rewards = []
     for i in range(total_episodes):
-        state = env.reset()
+        state, origin_state = env.reset()
+        print("state.shapr:",state.shape)
+        
         agent.init_game_setting()
         done = False
         episode_reward = 0.0

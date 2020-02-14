@@ -115,7 +115,6 @@ def main():
         print(">> visualisation mode.")
         play_game(args, agent, env, total_episodes=1)
     else:
-        print("sdf")
         model_file = args.load_network_path
 
         agent.load_net.load_weights(model_file)
