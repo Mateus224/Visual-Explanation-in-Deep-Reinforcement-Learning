@@ -57,7 +57,6 @@ and you can test how the agent plays with:
 python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5
 ```
 
-![Alt text](pictures/DuelingNet.png?raw=true "DQN vs. Dueling DQN Network")
 
 # some results
 In this GIF you can see the different visualizations for the A3C algorithm Playing Breakout-v0 with 3 frames:
