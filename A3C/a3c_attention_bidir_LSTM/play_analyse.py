@@ -11,7 +11,7 @@ from visualization.grad_cam import *
 from visualization.model import build_network
 #import visualization.grad_cam.py
 
-num_frames=60
+num_frames=100
 
 
 def parse():
@@ -31,7 +31,7 @@ def parse():
     return args
 
 
-def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=75, save_dir='./movies/', env_name='Breakout-v0'):
+def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=150, save_dir='./movies/', env_name='Breakout-v0'):
 
     #_, _, load_model ,_= build_network(agent.observation_shape, agent.action_space_n)
     #_, _,load_guided_model,_ = build_guided_model(agent.observation_shape, agent.action_space_n)
@@ -42,8 +42,8 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
 
     total_frames=len(history['state'])
-    backprop_actor = init_guided_backprop(agent.load_net,"timedistributed_5")
-    backprop_critic = init_guided_backprop(agent.load_net,"timedistributed_5")
+    backprop_actor = init_guided_backprop(agent.load_net,"timedistributed_1")
+    backprop_critic = init_guided_backprop(agent.load_net,"timedistributed_1")
     cam_actor = init_grad_cam(agent.load_net, "timedistributed_3")
     cam_critic = init_grad_cam(agent.load_net, "timedistributed_3", False)
     guidedBackprop_actor = init_guided_backprop(agent.load_net_guided,"timedistributed_12")
@@ -125,17 +125,20 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
 def normalization(heatmap, history, visu, GDB_actor=0):
     heatmap=np.asarray(heatmap)
+    print(heatmap.shape)
     if visu=='gdb':
         print(heatmap.shape)
         heatmap = heatmap[:,:,:]
         #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
+        np.set_printoptions(precision=100)
+        print("max/min: ", min(heatmap.flatten()), max(heatmap.flatten()))
         heatmap-= heatmap.mean() 
-        heatmap/= (heatmap.std() + 1e-5) #
-        if (GDB_actor):
+        heatmap/= (heatmap.std() + 1e-5) #heatmap = (heatmap - heatmap.min()) / (heatmap.max()-heatmap.min() + 1e-5)
+        #if (GDB_actor):
             #print(heatmap)
-            heatmap*=50
-        else:
-            heatmap*= 0.1 #0.1 
+        #    heatmap*=50
+        #else:
+        heatmap*= 0.1 #0.1 
 
 
         # clip to [0, 1]

@@ -57,7 +57,7 @@ def init_guided_backprop(guided_model, layer_name):
 def guided_backprop(frame, backprop_fn):
     """Guided Backpropagation method for visualizing input saliency."""
     grads_val = backprop_fn([frame, 0])[0]
-    print(grads_val)
+    #print(grads_val)
     return grads_val
 
 
@@ -69,7 +69,7 @@ def guided_backprop(frame, backprop_fn):
 def compute_saliency(model, guided_model, frame,action, layer_name='conv2d_6'):#, cls=-1, visualize=True, save=True):
 
     gb = guided_backpropa(frame, guided_model, layer_name)
- 
+    
         
     return gb#gradcam, gb, guided_gradcam
 

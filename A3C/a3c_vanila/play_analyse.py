@@ -9,7 +9,7 @@ from visualization.backpropagation import *
 from PIL import Image
 from visualization.grad_cam import *
 from visualization.model import build_network
-#import visualization.grad_cam.py
+#import visualization.grad_cam.py plot_model(self.q_network, to_file='model_plot.png', show_shapes=True, show_layer_names=True) from keras.utils.visualize_util import plot as plot_model
 
 num_frames=30
 
@@ -31,7 +31,7 @@ def parse():
     return args
 
 
-def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=75, save_dir='./movies/'):
+def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=300, save_dir='./movies/',env_name='Breakout-v0'):
 
     _, _, load_model ,_= build_network(agent.observation_shape, agent.action_space_n)
     #_, _,load_model_cam,_ = build_network(agent.observation_shape, agent.action_space_n)
@@ -42,7 +42,6 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
     load_guided_model.load_weights(args.load_network_path)
     #load_model_guided_backprop.load_weights(args.load_network_path)
     #load_model_grad_cam.load_weights(args.load_network_path)
-    frame_1= np.zeros((84, 84))
     total_frames=len(history['state'])
     backprop_actor = init_guided_backprop(load_model,"dense_6")
     backprop_critic = init_guided_backprop(load_model,"dense_5")
@@ -52,7 +51,7 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
     guidedBackprop_critic = init_guided_backprop(load_guided_model,"dense_8")
     gradCAM_actor = init_grad_cam(load_guided_model, "convolution2d_7")
     gradCAM_critic = init_grad_cam(load_guided_model, "convolution2d_7", False)
-    fig_array = np.zeros((4,2,num_frames,84,84,3))
+    fig_array = np.zeros((6,2,num_frames,84,84,3))
     for i in range(num_frames):#total_frames): #num_frames
         ix = first_frame+i
         if ix < total_frames: # prevent loop from trying to process a frame ix greater than rollout length
@@ -61,7 +60,6 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
             frame = np.expand_dims(frame, axis=0)
             if ix%10==0:
                 print(ix)
-            print(frame.shape)
 
             actor_gbp_heatmap = guided_backprop(frame, backprop_actor)
             actor_gbp_heatmap = np.asarray(actor_gbp_heatmap)
@@ -100,20 +98,24 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
     history_gradients_actor = history['gradients_actor'].copy()
     history_gradients_critic = history['gradients_critic'].copy()
-    history_gradCam_actor = history['gradCam_actor'].copy()
-    history_gradCam_critic = history['gradCam_critic'].copy()
     history_gdb_actor = history['gdb_actor'].copy()
     history_gdb_critic = history['gdb_critic'].copy()
-    history_guidedGradCam_actor = history['guidedGradCam_actor'].copy()
-    history_guidedGradCam_critic = history['guidedGradCam_critic'].copy()
+    history_gradCam_actor = history['gradCam_actor'].copy()
+    history_gradCam_critic = history['gradCam_critic'].copy()
+    history_gradCamGuided_actor = history['guidedGradCam_actor'].copy()
+    history_gradCamGuided_critic = history['guidedGradCam_critic'].copy()
     fig_array[0,0] = normalization(history_gradients_actor, history, "gdb",GDB_actor=1)
     fig_array[0,1] = normalization(history_gradients_critic, history, 'gdb')
-    fig_array[1,0] = normalization(history_gradCam_actor, history, "cam", )
-    fig_array[1,1] = normalization(history_gradCam_critic, history, 'cam')
-    fig_array[2,0] = normalization(history_gdb_actor, history, "gdb", GDB_actor=1)
-    fig_array[2,1] = normalization(history_gdb_critic, history, 'gdb')
-    fig_array[3,0] = normalization(history_guidedGradCam_actor, history, "cam")
-    fig_array[3,1] = normalization(history_guidedGradCam_critic, history, 'cam')
+    fig_array[1,0] = normalization(history_gdb_actor, history, "gdb", GDB_actor=1)
+    fig_array[1,1] = normalization(history_gdb_critic, history, 'gdb')
+    fig_array[2,0] = normalization(history_gradCam_actor, history, "cam", )
+    fig_array[2,1] = normalization(history_gradCam_critic, history, "cam")
+    fig_array[3,0] = normalization(history_gradCam_actor, history, "cam", GDB_actor=1, guided_model=history_gdb_actor)
+    fig_array[3,1] = normalization(history_gradCam_critic, history, 'cam',guided_model=history_gdb_critic)
+    fig_array[4,0] = normalization(history_gradCamGuided_actor, history, "cam")
+    fig_array[4,1] = normalization(history_gradCamGuided_critic, history, "cam")
+    fig_array[5,0] = normalization(history_gradCamGuided_actor, history, "cam",GDB_actor=1, guided_model=history_gdb_actor)
+    fig_array[5,1] = normalization(history_gradCamGuided_critic, history, 'cam',guided_model=history_gdb_critic)
 
     make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name)
 
@@ -124,42 +126,48 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
 
 
-def normalization(heatmap, history, visu, GDB_actor=0):
+def normalization(heatmap, history, visu, GDB_actor=0, guided_model=None):
+    frame=2
     heatmap=np.asarray(heatmap)
-    print("AA")
-    if visu=='gdb':
-        print(heatmap.shape)
-        heatmap = heatmap[:,:,:]
+    guided_model=np.asarray(guided_model)
+    if guided_model.all()==None:
+        if visu=='gdb':
+            print("normal")
+            heatmap = heatmap[:,:,:]
+            #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
+            heatmap-= heatmap.mean() 
+            heatmap/= (heatmap.std() + 1e-5) #
+            if (GDB_actor):
+                #print(heatmap)
+                heatmap*=50
+            else:
+                heatmap*= 0.1 #0.1 
+
+            # clip to [0, 1]
+            #gbp_heatmap += 0.5
+            heatmap = np.clip(heatmap, -1, 1)
+            heatmap_pic1 = heatmap[:,0,frame,:,:]
+        if visu=='cam':
+            #heatmap*= 1
+            #heatmap = np.clip(heatmap, 0, 1)
+            heatmap_pic1 = heatmap[:,:,:]
+    else:
+        print(" notnormal")
+        guided_model = guided_model[:,:,:]
         #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
-        heatmap-= heatmap.mean() 
-        heatmap/= (heatmap.std() + 1e-5) #
+        guided_model-= guided_model.mean() 
+        guided_model/= (guided_model.std() + 1e-5) #
         if (GDB_actor):
             #print(heatmap)
-            heatmap*=50
+            guided_model*=50
         else:
-            heatmap*= 0.1 #0.1 
-
-
-        # clip to [0, 1]
-        #gbp_heatmap += 0.5
-        heatmap = np.clip(heatmap, -1, 1)
-        heatmap_pic1 = heatmap[:,0,2,:,:]
-        print("heatmapGdb",heatmap_pic1.shape)
-        #save_for_GradCam(heatmap_pic1, 1)
-    if visu=='cam':
-        
-        #print(heatmap.shape)
-        #heatmap = heatmap[:,0,:,:,:]
-        #heatmap-= heatmap.mean() 
-        #heatmap/= (heatmap.std() + 1e-5) #
-        heatmap*= 1
-        heatmap = np.clip(heatmap, 0, 1)
-        
-        
-        heatmap_pic1 = heatmap[:,:,:]
-        print("heatmapCAM",heatmap_pic1.shape)
-        #save_for_GradCam(heatmap_pic1)
-
+            guided_model*= 0.1 #0.1 
+        guided_model = np.clip(guided_model, -1, 1)
+        guided_model = guided_model[:,0,frame,:,:]
+        guided_model[guided_model<0.0] = 0
+        heatmap[heatmap<0.0] = 0
+        heatmap_pic1 = (heatmap*guided_model)
+        heatmap_pic1[heatmap_pic1<0.0]=0
 
     all_unproc_frames = history['un_proc_state'].copy()
     frame=np.zeros((num_frames,84,84,3))
@@ -200,7 +208,7 @@ def overlap(frame,gbp_heatmap):
     return mixed
     #return mixed
 
-def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name):
+def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name ):
     movie_title ="{}-{}-{}.mp4".format(prefix, num_frames, env_name.lower())
     max_ep_len = first_frame + num_frames + 1
     FFMpegWriter = manimation.writers['ffmpeg']
@@ -221,8 +229,8 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
                 for k in range(0, plotColumns):
                     img = fig_array[j,k,i,:,:,:]
                     ax=fig.add_subplot(plotRows, plotColumns, z+1)
-                    ax.set_ylabel(titleListY[j])
-                    ax.set_xlabel(titleListX[k])
+                    #ax.set_ylabel(titleListY[j])
+                    #ax.set_xlabel(titleListX[k])
                     plt.imshow(img)
                     z=z+1
 

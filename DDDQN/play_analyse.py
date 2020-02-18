@@ -9,6 +9,9 @@ from visualization.backpropagation import *
 from PIL import Image
 from visualization.grad_cam import *
 from visualization.model import build_network
+from scipy.misc.pilutil import imresize
+from scipy.misc.pilutil import imread
+from skimage.color import rgb2gray
 #import visualization.grad_cam.py
 
 num_frames=450
@@ -262,12 +265,23 @@ def play_game(args, agent, env, total_episodes=1):
 
     return history
 
+def save_observation(observation):
+    self.last_observations = self.observations[...]
+    self.observations = np.roll(self.observations, -self.input_depth, axis=0)
+    self.observations[-self.input_depth:, ...] = self.transform_screen(observation)
+    
+def transform_screen(data):
+    return rgb2gray(imresize(data, [84,84]))[None, ...]
 
-def prozess_atari_wraper_frames(origin_state, state):
+
+def prozess_atari_wraper_frames(origin_state=None, state=None):
     new_frame=state.reshape(210,160,4,3)
     new_frame=np.moveaxis(new_frame, 0,-2)
     new_frame=np.moveaxis(new_frame, 0,-2)
     print("new_frame",new_frame.shape)
+    new_frame = transform_screen(new_frame)
+    print("new_frame2",new_frame.shape)
+    return(new_frame)
     FFMpegWriter = manimation.writers['ffmpeg']
     metadata = dict(title='test', artist='mateus', comment='atari-video')
     writer = FFMpegWriter(fps=8)
@@ -289,7 +303,6 @@ def test(agent, env, total_episodes=30):
     rewards = []
     for i in range(total_episodes):
         state, origin_state = env.reset()
-        print("state.shapr:",state.shape)
         
         agent.init_game_setting()
         done = False
@@ -297,7 +310,7 @@ def test(agent, env, total_episodes=30):
 
         #playing one game
         while(not done):
-            action = agent.make_action(state, test=True)
+            action = agent.make_action(prozess_atari_wraper_frames(state=state), test=True)
             state, reward, done, info = env.step(action)
             episode_reward += reward
 

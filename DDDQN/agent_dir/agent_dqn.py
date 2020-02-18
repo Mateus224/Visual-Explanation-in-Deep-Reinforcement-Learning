@@ -10,6 +10,7 @@ from keras.layers import Input, Convolution2D, Flatten, Dense, LeakyReLU, merge
 from keras.optimizers import RMSprop,Adam
 import keras.backend as K
 from keras.layers import Lambda
+from keras.utils.visualize_util import plot as plot_model
 
 from keras.backend.tensorflow_backend import set_session
 
@@ -180,7 +181,7 @@ class Agent_DQN(Agent):
         # MSE loss on target_q_value only
         model.compile(loss=['mse','mse'], loss_weights=[0.0,1.0],optimizer=Adam(lr=0.00001))#self.opt)
         model.summary()
-        
+        plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
         return model        
 
     def run(self, state, action, reward, terminal, observation):

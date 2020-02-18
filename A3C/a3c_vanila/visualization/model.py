@@ -1,5 +1,6 @@
 from keras.models import Model
 from keras.layers import Input, Convolution2D, Flatten, Dense
+from keras.utils.visualize_util import plot as plot_model
 
 def build_network(input_shape, output_shape):
     input_data = Input(shape = input_shape, name = "input")
@@ -18,5 +19,6 @@ def build_network(input_shape, output_shape):
     adventage = Input(shape=(1,))
     train_network = Model(input=[input_data,adventage], output=[value, policy])
     print(train_network.summary())
+    plot_model(train_network, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
     return value_network, policy_network, train_network, adventage

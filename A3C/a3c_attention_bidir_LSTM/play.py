@@ -17,6 +17,7 @@ from keras.layers import (Activation, Convolution2D, Dense, Flatten, Input,
 from keras.layers.wrappers import Bidirectional
 from keras.layers.wrappers import Bidirectional
 from visualization.backpropagation import build_guided_model
+from keras.utils.visualize_util import plot as plot_model
 
 from play_analyse import play_game
 
@@ -97,6 +98,7 @@ class ActingAgent(object):
 
         self.load_net.compile(optimizer=Adam(lr=0.0001), loss='mse')  # clipnorm=1.
         _, _, self.load_net_guided, _ = build_guided_model(self.observation_shape, action_space.n)
+        plot_model(self.load_net, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
         self.load_net_guided.compile(optimizer=Adam(lr=0.0001), loss='mse')  # clipnorm=1.
 

@@ -60,6 +60,7 @@ def grad_cam(gradient_function, frame, action, actor=True):
     cam_max = cam.max() 
     if cam_max != 0: 
         cam = cam / cam_max
+    cam[cam<0]=0
     #print(cam)
     return cam
 
