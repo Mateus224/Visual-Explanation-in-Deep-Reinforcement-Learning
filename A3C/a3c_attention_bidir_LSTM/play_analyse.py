@@ -11,7 +11,7 @@ from visualization.grad_cam import *
 from visualization.model import build_network
 #import visualization.grad_cam.py
 
-num_frames=100
+num_frames=160
 
 
 def parse():
@@ -42,12 +42,12 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
 
     total_frames=len(history['state'])
-    backprop_actor = init_guided_backprop(agent.load_net,"timedistributed_1")
-    backprop_critic = init_guided_backprop(agent.load_net,"timedistributed_1")
+    backprop_actor = init_guided_backprop(agent.load_net,"timedistributed_5")
+    backprop_critic = init_guided_backprop(agent.load_net,"timedistributed_5")
     cam_actor = init_grad_cam(agent.load_net, "timedistributed_3")
     cam_critic = init_grad_cam(agent.load_net, "timedistributed_3", False)
-    guidedBackprop_actor = init_guided_backprop(agent.load_net_guided,"timedistributed_12")
-    guidedBackprop_critic = init_guided_backprop(agent.load_net_guided,"timedistributed_12")
+    guidedBackprop_actor = init_guided_backprop(agent.load_net_guided,"timedistributed_11")
+    guidedBackprop_critic = init_guided_backprop(agent.load_net_guided,"timedistributed_11")
     gradCAM_actor = init_grad_cam(agent.load_net_guided, "timedistributed_10")
     gradCAM_critic = init_grad_cam(agent.load_net_guided, "timedistributed_10", False)
     fig_array = np.zeros((4,2,num_frames,84,84,3))
@@ -87,7 +87,7 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
             history['gdb_critic'].append(critic_gbp_heatmap)
 
             gradCam_heatmap = grad_cam(gradCAM_actor, frame, action)
-            gradCam_heatmap = np.asarray(Cam_heatmap)
+            gradCam_heatmap = np.asarray(gradCam_heatmap)
             history['guidedGradCam_actor'].append(Cam_heatmap)
 
             gradCam_heatmap = grad_cam(gradCAM_critic, frame, action, False)

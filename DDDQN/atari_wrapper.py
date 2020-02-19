@@ -153,10 +153,8 @@ class FrameStack(gym.Wrapper):
         for _ in range(self.k):
             self.frames.append(ob)
         if(self.frame_stack_and_origin):
-            print("sasda")
             return self._get_ob(), ob
         else:
-            print("you are")
             return self._get_ob()
 
     def _step(self, action):
@@ -165,7 +163,7 @@ class FrameStack(gym.Wrapper):
         if(self.frame_stack_and_origin):
             return self._get_ob(),ob, reward, done, info
         else:
-            return self._get_ob(),ob, reward, done, info
+            return self._get_ob(), reward, done, info
 
     def _get_ob(self):
         assert len(self.frames) == self.k

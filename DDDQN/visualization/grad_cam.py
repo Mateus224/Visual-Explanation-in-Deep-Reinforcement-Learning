@@ -17,10 +17,10 @@ def init_grad_cam(input_model, layer_name, actor=True):
 
     action = K.placeholder(shape=(), dtype=np.int32)
     if(actor):
-        y_c = input_model.output[1][0, action]
-    else:
-        print("output[0]",input_model.output[0].shape)
         y_c = input_model.output[0][0, action]
+    #else:
+    #    print("output[0]",input_model.output[0].shape)
+    #    y_c = input_model.output[0, action]
     conv_output = input_model.get_layer(layer_name).output
     grads = K.gradients(y_c, conv_output)[0]
     # Normalize if necessary
@@ -33,7 +33,6 @@ def init_grad_cam(input_model, layer_name, actor=True):
 
 def grad_cam(gradient_function, frame, action, actor=True):
     """GradCAM method for visualizing input saliency."""
-    
     if(actor):
         output, grads_val = gradient_function([frame,action])#,[action])
     else:
@@ -46,9 +45,9 @@ def grad_cam(gradient_function, frame, action, actor=True):
 
     #weights = np.expand_dims(weights, axis=0)
     #cam = np.dot(output, weights)
-    cam = np.zeros((20,20))
+    cam = np.zeros((output[ : , :,0].shape))
     for i in range(weights.shape[0]):
-        cam += weights[i] * output[ i, : , :]
+        cam += weights[i] * output[ : , :,i]
 
 
     #print(cam_.shape)
@@ -58,6 +57,6 @@ def grad_cam(gradient_function, frame, action, actor=True):
     cam_max = cam.max() 
     if cam_max != 0: 
         cam = cam / cam_max
-    
+    cam[cam<0.0]=0
     return cam
 
