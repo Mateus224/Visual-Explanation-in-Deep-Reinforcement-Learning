@@ -30,8 +30,8 @@ However, since the results of the visualization techniques strongly depends on t
 - [x] Guided Backpropagation
 - [X] GradCam
 - [X] Guided GradCam
-- [ ] SmoothGrad
-- [ ] Perturbation-based Saliency Map
+- [X] Guided1GradCam
+- [X] Guided2GradCam
 
 ## Splitted Attention DDQN
 I Introduce a new model of an off-policy network which performes better then the state of the art Attention DDDQN (In average this Splitted Attention DDQN Network is making 7-8000 points in the game Seaquest-v0. DDDQN with Attation what I take as Basline the Network made 3-4000 Points). 
