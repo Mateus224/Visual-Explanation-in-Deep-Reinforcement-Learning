@@ -31,7 +31,7 @@ However, since the results of the visualization techniques strongly depends on t
 - [X] GradCam
 - [X] Guided GradCam (multiplication of Guided Back. and GradCam)
 - [X] Guided1GradCam (GradCam with Guided Model)
-- [X] Guided2GradCam (GradCam with Guided Modeland multipied with Guided Back.)
+- [X] Guided2GradCam (GradCam with Guided Model and multipied with Guided Back.)
 
 ## Splitted Attention DDQN
 I Introduce a new model of an off-policy network which performes better then the state of the art Attention DDDQN (In average this Splitted Attention DDQN Network is making 7-8000 points in the game Seaquest-v0. DDDQN with Attation what I take as Basline the Network made 3-4000 Points). 
