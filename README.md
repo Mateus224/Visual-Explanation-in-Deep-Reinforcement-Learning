@@ -7,7 +7,7 @@ It is checked to what extent the algorithms can be used in the area of Reinforce
 
 Among other things the results of this work refutes the claims made in the papers "Visualizing and Understanding Atari Agents" that guided backpropagation cannot be used for visualization techniques. Furthermore, the assertion made in the paper "Sanity Checks for Saliency Maps" that Guided Backpropagation and Guided GradCam (at least in image processing) do not visualize the learned model but work similarly to an edge detector, do not apply to deep reinforcement learning as it does is shown in this work.
 
-However, since the results of the visualization techniques strongly depends on the quality of the neural network, two new architectures for off-policy algorithms were also developed in this work. Both developed Networks, beat the previous state-of-the-art off-policy Network.
+However, since the results of the visualization techniques strongly depends on the quality of the neural network, two new architectures for off-policy algorithms were also developed in this work. Both developed Networks, beat the classaic Dueling and Attention structure.
 
 # Deep Reinfocement Learning Algorithms:
 
