@@ -1,7 +1,7 @@
 ## Visual-Explanation-in-Deep-Reinforcement-Learning-through-Guided-Backpropagation-and-GradCam
 Deep Reinforcement Learning (DRL) connects the classic Reinforcement Learning algorithms with Convolutional Neural Networks (CNN). A problem in DRL is that the CNN is a black-box and it's not easy to understand the decision-making process of the agent. In order to be able to use the programs in highly dangerous environments for humans and machines, the developer needs a debugging tool to improve that the program does what is expected.
 
-This work brings some of the best-known visualization methods from the field of image classification to the area of Deep Reinforcement Learning (DRL).Furthermore, 2 new visualization techniques have been further developed, one of which provides particularly good results.
+This work brings some of the best-known visualization methods from the field of image classification to the area of Deep Reinforcement Learning (DRL).Furthermore, 2 new visualization techniques have been further developed (Guided1GradCam and Guided2GradCam), one of which provides particularly good results.
 
 It is checked to what extent the algorithms can be used in the area of Reinforcement learning. Furthermore, the question also arises how well the different DRL algorithms can be visualized in different environments from different visualization techniques.
 
@@ -29,9 +29,9 @@ However, since the results of the visualization techniques strongly depends on t
 - [X] Backpropagation
 - [x] Guided Backpropagation
 - [X] GradCam
-- [X] Guided GradCam
-- [X] Guided1GradCam
-- [X] Guided2GradCam
+- [X] Guided GradCam (multiplication of Guided Back. and GradCam)
+- [X] Guided1GradCam (GradCam with Guided Model)
+- [X] Guided2GradCam (GradCam with Guided Modeland multipied with Guided Back.)
 
 ## Splitted Attention DDQN
 I Introduce a new model of an off-policy network which performes better then the state of the art Attention DDDQN (In average this Splitted Attention DDQN Network is making 7-8000 points in the game Seaquest-v0. DDDQN with Attation what I take as Basline the Network made 3-4000 Points). 
