@@ -22,7 +22,7 @@ However, since the results of the visualization techniques strongly depends on t
 
 [on Policy algorithms:]
 - [X] A3C
-- [X] A3C Bidirectional LSTM with Attention Network
+- [X] A3C Attention with LSTM
 
 # Visualization Techniques:
 
