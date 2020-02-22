@@ -15,7 +15,7 @@ However, since the results of the visualization techniques strongly depends on t
 - [X] DQN
 - [x] DDQN
 - [x] Dueling DDQN
-- [X] LSTM DQN
+- [X] LSTM D/D/DQN
 - [X] Bidirectional LSTM DQN
 - [X] Attention LSTM DQN
 - [X] Splitted Attention LSTM DQN
