@@ -9,9 +9,11 @@ from visualization.backpropagation import *
 from PIL import Image
 from visualization.grad_cam import *
 from visualization.model import build_network
+from matplotlib.colors import ListedColormap
+import matplotlib as mpl
 #import visualization.grad_cam.py
 
-num_frames=160
+num_frames=700
 
 
 def parse():
@@ -31,7 +33,7 @@ def parse():
     return args
 
 
-def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=150, save_dir='./movies/', env_name='Breakout-v0'):
+def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolution=350, save_dir='./movies/', env_name='Breakout-v0'):
 
     #_, _, load_model ,_= build_network(agent.observation_shape, agent.action_space_n)
     #_, _,load_guided_model,_ = build_guided_model(agent.observation_shape, agent.action_space_n)
@@ -40,17 +42,16 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
     #load_model.load_weights(args.load_network_path)
     #load_guided_model.load_weights(args.load_network_path)
 
-
     total_frames=len(history['state'])
-    backprop_actor = init_guided_backprop(agent.load_net,"timedistributed_5")
-    backprop_critic = init_guided_backprop(agent.load_net,"timedistributed_5")
-    cam_actor = init_grad_cam(agent.load_net, "timedistributed_3")
-    cam_critic = init_grad_cam(agent.load_net, "timedistributed_3", False)
-    guidedBackprop_actor = init_guided_backprop(agent.load_net_guided,"timedistributed_11")
-    guidedBackprop_critic = init_guided_backprop(agent.load_net_guided,"timedistributed_11")
-    gradCAM_actor = init_grad_cam(agent.load_net_guided, "timedistributed_10")
-    gradCAM_critic = init_grad_cam(agent.load_net_guided, "timedistributed_10", False)
-    fig_array = np.zeros((4,2,num_frames,84,84,3))
+    backprop_actor = init_guided_backprop(agent.load_net,"dense_3")
+    backprop_critic = init_guided_backprop(agent.load_net,"dense_3")
+    cam_actor = init_grad_cam(agent.load_net, "timedistributed_1")
+    cam_critic = init_grad_cam(agent.load_net, "timedistributed_1", False)
+    guidedBackprop_actor = init_guided_backprop(agent.load_net_guided,"dense_6")
+    guidedBackprop_critic = init_guided_backprop(agent.load_net_guided,"dense_6")
+    gradCAM_actor = init_grad_cam(agent.load_net_guided, "timedistributed_8")
+    gradCAM_critic = init_grad_cam(agent.load_net_guided, "timedistributed_8", False)
+    fig_array = np.zeros((6,2,num_frames,84,84,3))
     for i in range(num_frames):#total_frames): #num_frames
         ix = first_frame+i
         if ix < total_frames: # prevent loop from trying to process a frame ix greater than rollout length
@@ -63,8 +64,6 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
             actor_gbp_heatmap = guided_backprop(frame, backprop_actor)
             actor_gbp_heatmap = np.asarray(actor_gbp_heatmap)
             history['gradients_actor'].append(actor_gbp_heatmap)
-
-            #print(np.array(frame))
 
             actor_gbp_heatmap = guided_backprop(frame, backprop_critic)
             actor_gbp_heatmap = np.asarray(actor_gbp_heatmap)
@@ -88,7 +87,7 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
             gradCam_heatmap = grad_cam(gradCAM_actor, frame, action)
             gradCam_heatmap = np.asarray(gradCam_heatmap)
-            history['guidedGradCam_actor'].append(Cam_heatmap)
+            history['guidedGradCam_actor'].append(gradCam_heatmap)
 
             gradCam_heatmap = grad_cam(gradCAM_critic, frame, action, False)
             gradCam_heatmap = np.asarray(gradCam_heatmap)
@@ -99,22 +98,27 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
     history_gradients_actor = history['gradients_actor'].copy()
     history_gradients_critic = history['gradients_critic'].copy()
-    history_gradCam_actor = history['gradCam_actor'].copy()
-    history_gradCam_critic = history['gradCam_critic'].copy()
     history_gdb_actor = history['gdb_actor'].copy()
     history_gdb_critic = history['gdb_critic'].copy()
-    history_guidedGradCam_actor = history['guidedGradCam_actor'].copy()
-    history_guidedGradCam_critic = history['guidedGradCam_critic'].copy()
-    fig_array[0,0] = normalization(history_gradients_actor, history, "gdb",GDB_actor=0)
+    history_gradCam_actor = history['gradCam_actor'].copy()
+    history_gradCam_critic = history['gradCam_critic'].copy()
+    history_gradCamGuided_actor = history['guidedGradCam_actor'].copy()
+    history_gradCamGuided_critic = history['guidedGradCam_critic'].copy()
+    fig_array[0,0] = normalization(history_gradients_actor, history, "gdb",GDB_actor=1)
     fig_array[0,1] = normalization(history_gradients_critic, history, 'gdb')
-    fig_array[1,0] = normalization(history_gradCam_actor, history, "cam", )
-    fig_array[1,1] = normalization(history_gradCam_critic, history, 'cam')
-    fig_array[2,0] = normalization(history_gdb_actor, history, "gdb", GDB_actor=0)
-    fig_array[2,1] = normalization(history_gdb_critic, history, 'gdb')
-    fig_array[3,0] = normalization(history_guidedGradCam_actor, history, "cam")
-    fig_array[3,1] = normalization(history_guidedGradCam_critic, history, 'cam')
+    fig_array[1,0] = normalization(history_gdb_actor, history, "gdb", GDB_actor=1)
+    fig_array[1,1] = normalization(history_gdb_critic, history, 'gdb')
+    fig_array[2,0] = normalization(history_gradCam_actor, history, "cam" )
+    fig_array[2,1] = normalization(history_gradCam_critic, history, "cam")
+    fig_array[3,0] = normalization(history_gradCam_actor, history, "cam", GDB_actor=1, guided_model=history_gdb_actor)
+    fig_array[3,1] = normalization(history_gradCam_critic, history, 'cam',guided_model=history_gdb_critic)
+    fig_array[4,0] = normalization(history_gradCamGuided_actor, history, "cam")
+    fig_array[4,1] = normalization(history_gradCamGuided_critic, history, "cam")
+    fig_array[5,0] = normalization(history_gradCamGuided_actor, history, "cam",GDB_actor=1, guided_model=history_gdb_actor)
+    fig_array[5,1] = normalization(history_gradCamGuided_critic, history, 'cam',guided_model=history_gdb_critic)
 
     make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name)
+
 
 #def normalization_cam(cam_heatmap,history)
 
@@ -123,44 +127,51 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
 
 
-def normalization(heatmap, history, visu, GDB_actor=0):
+def normalization(heatmap, history, visu, GDB_actor=0, guided_model=None):
+    frame=2
     heatmap=np.asarray(heatmap)
-    print(heatmap.shape)
-    if visu=='gdb':
-        print(heatmap.shape)
-        heatmap = heatmap[:,:,:]
-        #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
-        np.set_printoptions(precision=100)
-        print("max/min: ", min(heatmap.flatten()), max(heatmap.flatten()))
-        heatmap-= heatmap.mean() 
-        heatmap/= (heatmap.std() + 1e-5) #heatmap = (heatmap - heatmap.min()) / (heatmap.max()-heatmap.min() + 1e-5)
-        #if (GDB_actor):
+    guided_model=np.asarray(guided_model)
+    if guided_model.all()==None:
+        if visu=='gdb':
+            print("normal")
+            print(heatmap.shape)
+            for i in range(heatmap.shape[0]):
+                heatmap_ = heatmap[i,:,:,:,:]
+                #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
+                heatmap_-= heatmap_.mean() 
+                heatmap[i,:,:,:,:]/= (heatmap_.std() + 1e-5) #
+            if (GDB_actor):
+                #print(heatmap)
+                heatmap*=0.1#0.1
+            else:
+                heatmap*=0.1# 0.1 #0.1 
+            print("d",heatmap.shape)
+            # clip to [0, 1]
+            #gbp_heatmap += 0.5
+            heatmap = np.clip(heatmap, -1, 1)
+            heatmap_pic1 = heatmap[:,0,frame,:,:]
+        if visu=='cam':
+            #heatmap*= 1
+            #heatmap = np.clip(heatmap, 0, 1)
+            heatmap_pic1 = heatmap[:,:,:]
+    else:
+        print(" notnormal")
+        print("ds",guided_model.shape)
+        for i in range(guided_model.shape[0]):
+            guided_model_ = guided_model[i,:,:,:,:]
+            #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
+            guided_model_-= guided_model_.mean() 
+            guided_model[i,:,:,:,:]/= (guided_model_.std() + 1e-5) #
+        if (GDB_actor):
             #print(heatmap)
-        #    heatmap*=50
-        #else:
-        heatmap*= 0.1 #0.1 
-
-
-        # clip to [0, 1]
-        #gbp_heatmap += 0.5
-        heatmap = np.clip(heatmap, -1, 1)
-        print("gdb",heatmap.shape)
-        heatmap_pic1 = heatmap[:,0,9,:,:]
-        #save_for_GradCam(heatmap_pic1, 1)
-    if visu=='cam':
-        
-        #print(heatmap.shape)
-        #heatmap = heatmap[:,0,:,:,:]
-        #heatmap-= heatmap.mean() 
-        #heatmap/= (heatmap.std() + 1e-5) #
-        heatmap*= 1
-        heatmap = np.clip(heatmap, 0, 1)
-        print("can",heatmap.shape)
-        
-        heatmap_pic1 = heatmap[:,:,:]
-        print("heatmapCAM",heatmap_pic1.shape)
-        #save_for_GradCam(heatmap_pic1)
-
+            guided_model*=0.1#0.1
+        else:
+            guided_model*=0.1# 0.1 #0.1 
+        guided_model = np.clip(guided_model, -1, 1)
+        guided_model = guided_model[:,0,frame,:,:]
+        guided_model[guided_model<0.0] = 0
+        heatmap[heatmap<0.0] = 0
+        heatmap_pic1 = (heatmap*guided_model)
 
     all_unproc_frames = history['un_proc_state'].copy()
     frame=np.zeros((num_frames,84,84,3))
@@ -201,7 +212,7 @@ def overlap(frame,gbp_heatmap):
     return mixed
     #return mixed
 
-def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name):
+def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir,prefix,env_name ):
     movie_title ="{}-{}-{}.mp4".format(prefix, num_frames, env_name.lower())
     max_ep_len = first_frame + num_frames + 1
     FFMpegWriter = manimation.writers['ffmpeg']
@@ -209,6 +220,8 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
     writer = FFMpegWriter(fps=8, metadata=metadata)
     total_frames = len(history['state'])
     fig = plt.figure(figsize=[6, 6*1.3], dpi=resolution)
+    print("fig_array.shape: ",fig_array.shape)
+    #cMap = ListedColormap(['yellow','blue'])
     with writer.saving(fig, save_dir + movie_title, resolution):
         titleListX=["Actor","Critic"]
         titleListY=["Backpropagation", "GradCam", "Guided Backpropagation","Guided GeadCam"]
@@ -220,10 +233,18 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
             for j in range(0, plotRows):
                 for k in range(0, plotColumns):
                     img = fig_array[j,k,i,:,:,:]
+                    bar_green= img[:,:,1:]
+                    bar_red= img[:,:,0]
                     ax=fig.add_subplot(plotRows, plotColumns, z+1)
-                    ax.set_ylabel(titleListY[j])
-                    ax.set_xlabel(titleListX[k])
+                    #heatmap = ax.pcolor(bar_green, cmap=cMap)
+                    #heatmap = ax.pcolor(img, cmap=plt.cm.Greans)
+                    plt.axis('off')
+                    
+                    #ax.set_ylabel(titleListY[j])
+                    #ax.set_xlabel(titleListX[k])
+                    #plt.contourf(bar_green, vmin=0, vmax=1)
                     plt.imshow(img)
+                    #plt.colorbar(cmap=cMap)
                     z=z+1
 
             writer.grab_frame() 
@@ -238,7 +259,7 @@ def play_game(args, agent, env, total_episodes=1):
     np.set_printoptions(threshold=sys.maxsize)
     history = { 'state': [], 'un_proc_state' : [], 'action': [], 'gradients_actor':[], 'gradients_critic':[],'gradCam_actor':[],'gradCam_critic':[], 'gdb_actor':[],'gdb_critic':[], 'guidedGradCam_actor':[],'guidedGradCam_critic':[] ,'movie_frames':[]}
     rewards = []
-    agent.load_net.load_weights(args.load_network_path)
+    #agent.load_net.load_weights(args.load_network_path)
     for i in range(total_episodes):
         state = env.reset()
         #agent.init_game_setting()

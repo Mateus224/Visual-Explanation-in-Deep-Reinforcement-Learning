@@ -89,7 +89,6 @@ class ActingAgent(object):
         self.observations[-self.input_depth:, ...] = self.transform_screen(observation)
 
     def transform_screen(self, data):
-        print("XXX:",data.shape)
         return rgb2gray(imresize(data, self.screen))[None, ...]
 
 

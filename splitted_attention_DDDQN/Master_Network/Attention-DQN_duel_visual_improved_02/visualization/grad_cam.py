@@ -13,7 +13,7 @@ from tensorflow.python.framework import ops
 timestep=9
 
 
-def init_grad_cam(input_model, layer_name):
+def init_grad_cam(input_model, layer_name, actor=True):
 
     action = K.placeholder(shape=(), dtype=np.int32)
     y_c = input_model.output[0, action]
@@ -25,20 +25,21 @@ def init_grad_cam(input_model, layer_name):
 
     return gradient_function
 
-def grad_cam(gradient_function, frame, action):
+def grad_cam(gradient_function, frame, action, actor=True):
     """GradCAM method for visualizing input saliency."""
     
 
     output, grads_val = gradient_function([frame,action])#,[action])
-    print("grads",grads_val.shape)
+
     weights = np.mean(grads_val, axis=(2,3))
-    print("grads1",weights.shape)
+
+    #print("out",output.shape)
     weights = weights[0,timestep,:]
     output = output[0,timestep,:,:,:]
-    
+
     #weights = np.expand_dims(weights, axis=0)
     #cam = np.dot(output, weights)
-    cam = np.zeros((20,20))
+    cam = np.zeros((9,9))
     for i in range(weights.shape[0]):
         cam += weights[i] * output[ :, : , i]
 
@@ -50,6 +51,7 @@ def grad_cam(gradient_function, frame, action):
     cam_max = cam.max() 
     if cam_max != 0: 
         cam = cam / cam_max
-    
+    cam[cam<0]=0
+    #print(cam)
     return cam
 

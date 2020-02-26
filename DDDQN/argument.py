@@ -6,7 +6,7 @@ def add_arguments(parser):
     parser.add_argument('--state_length', type=int, default = 4, help='Number of most recent frames to produce the input to the network')
     parser.add_argument('--gamma', type=float, default = 0.99, help='Discount factor')
     parser.add_argument('--exploration_steps', type=int, default = 1000000, help='Number of steps over which the initial value of epsilon is linearly annealed to its final value')
-    parser.add_argument('--initial_epsilon', type=float, default = 1.000, help='Initial value of epsilon in epsilon-greedy')
+    parser.add_argument('--initial_epsilon', type=float, default = 0.500, help='Initial value of epsilon in epsilon-greedy')
     parser.add_argument('--final_epsilon', type=float, default = 0.005, help='Final value of epsilon in epsilon-greedy')
     parser.add_argument('--initial_replay_size', type=int, default = 10000, help='Number of steps to populate the replay memory before training starts')
     parser.add_argument('--num_replay_memory', type=int, default = 175000, help='Number of replay memory the agent uses for training')

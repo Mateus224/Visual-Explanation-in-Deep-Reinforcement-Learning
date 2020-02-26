@@ -11,7 +11,7 @@ from visualization.grad_cam import *
 from visualization.model import build_network
 #import visualization.grad_cam.py plot_model(self.q_network, to_file='model_plot.png', show_shapes=True, show_layer_names=True) from keras.utils.visualize_util import plot as plot_model
 
-num_frames=30
+num_frames=3200
 
 
 def parse():
@@ -86,8 +86,8 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
             history['gdb_critic'].append(critic_gbp_heatmap)
 
             gradCam_heatmap = grad_cam(gradCAM_actor, frame, action)
-            gradCam_heatmap = np.asarray(Cam_heatmap)
-            history['guidedGradCam_actor'].append(Cam_heatmap)
+            gradCam_heatmap = np.asarray(gradCam_heatmap)
+            history['guidedGradCam_actor'].append(gradCam_heatmap)
 
             gradCam_heatmap = grad_cam(gradCAM_critic, frame, action, False)
             gradCam_heatmap = np.asarray(gradCam_heatmap)
@@ -127,22 +127,61 @@ def init_saliency_map(args, agent, history, first_frame=0, prefix='QF_', resolut
 
 
 def normalization(heatmap, history, visu, GDB_actor=0, guided_model=None):
+#    frame=2
+#    heatmap=np.asarray(heatmap)
+#    guided_model=np.asarray(guided_model)
+#    if guided_model.all()==None:
+#        if visu=='gdb':
+#            print("normal")
+#            heatmap = heatmap[:,:,:]
+#            heatmap-= heatmap.mean() 
+#            heatmap/= (heatmap.std() + 1e-5) #
+#            if (GDB_actor):
+                #print(heatmap)
+#                heatmap*=50
+#            else:
+#                heatmap*= 0.1 #0.1 
+
+
+#            heatmap = np.clip(heatmap, -1, 1)
+#            heatmap_pic1 = heatmap[:,0,frame,:,:]
+#        if visu=='cam':
+#            heatmap_pic1 = heatmap[:,:,:]
+#    else:
+#        print(" notnormal")
+#        guided_model = guided_model[:,:,:]
+#        guided_model-= guided_model.mean() 
+#        guided_model/= (guided_model.std() + 1e-5) #
+#        if (GDB_actor):
+#            #print(heatmap)
+#            guided_model*=50
+#        else:
+#            guided_model*= 0.1 #0.1 
+#        guided_model = np.clip(guided_model, -1, 1)
+#        guided_model = guided_model[:,0,frame,:,:]
+#        guided_model[guided_model<0.0] = 0
+#        heatmap[heatmap<0.0] = 0
+#        heatmap_pic1 = (heatmap*guided_model)
+#        heatmap_pic1[heatmap_pic1<0.0]=0
     frame=2
     heatmap=np.asarray(heatmap)
     guided_model=np.asarray(guided_model)
     if guided_model.all()==None:
         if visu=='gdb':
             print("normal")
-            heatmap = heatmap[:,:,:]
-            #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
-            heatmap-= heatmap.mean() 
-            heatmap/= (heatmap.std() + 1e-5) #
+            print(heatmap.shape)
+            for i in range(heatmap.shape[0]):
+                heatmap_ = heatmap[i,:,:,:,:]
+                #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
+                heatmap_-= heatmap_.mean() 
+                heatmap[i,:,:,:,:]/= (heatmap_.std() + 1e-5) #
             if (GDB_actor):
                 #print(heatmap)
-                heatmap*=50
+                print(np.max(heatmap))
+                heatmap*=25#0.1
             else:
-                heatmap*= 0.1 #0.1 
-
+                heatmap*=0.1# 0.1 #0.1 
+            print("d",heatmap.shape)
             # clip to [0, 1]
             #gbp_heatmap += 0.5
             heatmap = np.clip(heatmap, -1, 1)
@@ -153,21 +192,22 @@ def normalization(heatmap, history, visu, GDB_actor=0, guided_model=None):
             heatmap_pic1 = heatmap[:,:,:]
     else:
         print(" notnormal")
-        guided_model = guided_model[:,:,:]
-        #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
-        guided_model-= guided_model.mean() 
-        guided_model/= (guided_model.std() + 1e-5) #
+        print("ds",guided_model.shape)
+        for i in range(guided_model.shape[0]):
+            guided_model_ = guided_model[i,:,:,:,:]
+            #gbp_heatmap_pic=gbp_heatmap[0,:,:,:]
+            guided_model_-= guided_model_.mean() 
+            guided_model[i,:,:,:,:]/= (guided_model_.std() + 1e-5) #
         if (GDB_actor):
             #print(heatmap)
-            guided_model*=50
+            guided_model*=25#0.1
         else:
-            guided_model*= 0.1 #0.1 
+            guided_model*=0.1# 0.1 #0.1 
         guided_model = np.clip(guided_model, -1, 1)
         guided_model = guided_model[:,0,frame,:,:]
         guided_model[guided_model<0.0] = 0
         heatmap[heatmap<0.0] = 0
         heatmap_pic1 = (heatmap*guided_model)
-        heatmap_pic1[heatmap_pic1<0.0]=0
 
     all_unproc_frames = history['un_proc_state'].copy()
     frame=np.zeros((num_frames,84,84,3))
@@ -231,6 +271,7 @@ def make_movie(args,history,fig_array,first_frame,num_frames,resolution,save_dir
                     ax=fig.add_subplot(plotRows, plotColumns, z+1)
                     #ax.set_ylabel(titleListY[j])
                     #ax.set_xlabel(titleListX[k])
+                    plt.axis('off')
                     plt.imshow(img)
                     z=z+1
 

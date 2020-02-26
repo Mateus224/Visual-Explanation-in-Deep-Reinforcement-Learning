@@ -127,7 +127,6 @@ def main():
 
     num_actions = env.action_space.n
     print(">>>> Game ", args.env, " #actions: ", num_actions)
-    print(args.test)
     dqn = DQNAgent(args, num_actions)
     if args.train:
         print(">> Training mode.")

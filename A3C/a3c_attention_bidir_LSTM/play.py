@@ -41,11 +41,11 @@ def build_network(input_shape, num_actions):
 
     #Bidrection for a_fc(s,a) and v_fc layer
     ##################################
-    if 1==1:#args.bidir:
-        value_hidden =Bidirectional(LSTM(512, return_sequences=True, name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
-        value_hidden_out = Bidirectional(LSTM(512, return_sequences=True, name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (value_hidden)
-        action_hidden =Bidirectional(LSTM(512, return_sequences=True,name = 'action_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
-        action_hidden_out = Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (action_hidden)
+    if 1==0:#args.bidir:
+        value_hidden =Bidirectional(LSTM(256, return_sequences=True, name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+        value_hidden_out = Bidirectional(LSTM(256, return_sequences=True, name = 'action_hidden_out', stateful=False, input_shape=(10, 256)), merge_mode='sum') (value_hidden)
+        action_hidden =Bidirectional(LSTM(256, return_sequences=True,name = 'action_hidden', stateful=False, input_shape=(10, 256)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+        action_hidden_out = Bidirectional(LSTM(256, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 256)), merge_mode='sum') (action_hidden)
 
     else:
          value_hidden_out = LSTM(512, return_sequences=True, stateful=False, input_shape=(10, 512)) (hidden_input)
@@ -69,12 +69,15 @@ def build_network(input_shape, num_actions):
     sent_representation_policy =merge([action, attention_pol], mode='mul',name = "Attention P")
 
 
+    #context_value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
+    #value = Dense(1, activation='linear', name='value')(context_value)
+    #context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
+    #con_policy =Dense(num_actions, activation='relu')(context_policy)
+    #policy = Dense(num_actions, activation='softmax', name='policy')(con_policy)
     context_value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
     value = Dense(1, activation='linear', name='value')(context_value)
     context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
-    con_policy =Dense(num_actions, activation='relu')(context_policy)
-    policy = Dense(num_actions, activation='softmax', name='policy')(con_policy)
-
+    policy =Dense(num_actions, activation='softmax')(context_policy)
 
     value_network = Model(input=input_data, output=value)
     policy_network = Model(input=input_data, output=policy)

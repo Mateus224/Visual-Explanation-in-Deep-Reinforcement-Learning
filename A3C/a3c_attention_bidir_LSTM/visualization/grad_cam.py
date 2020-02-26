@@ -48,7 +48,7 @@ def grad_cam(gradient_function, frame, action, actor=True):
 
     #weights = np.expand_dims(weights, axis=0)
     #cam = np.dot(output, weights)
-    cam = np.zeros((7,7))
+    cam = np.zeros((20,20))
     for i in range(weights.shape[0]):
         cam += weights[i] * output[ :, : , i]
 

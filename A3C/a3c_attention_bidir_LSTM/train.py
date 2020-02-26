@@ -28,7 +28,7 @@ parser.add_argument('--batch_size', default=20, help='Batch size to use during t
 parser.add_argument('--swap_freq', default=100, help='Number of frames before swapping network weights',
                     dest='swap_freq', type=int)
 parser.add_argument('--checkpoint', default=0, help='Frame to resume training', dest='checkpoint', type=int)
-parser.add_argument('--save_freq', default=250000, help='Number of frames before saving weights', dest='save_freq',
+parser.add_argument('--save_freq', default=50000, help='Number of frames before saving weights', dest='save_freq',
                     type=int)
 parser.add_argument('--queue_size', default=256, help='Size of queue holding agent experience', dest='queue_size',
                     type=int)
@@ -82,11 +82,11 @@ def build_network(input_shape, num_actions):
 
     #Bidrection for a_fc(s,a) and v_fc layer
     ##################################
-    if 1==1:#args.bidir:
-        value_hidden =Bidirectional(LSTM(512, return_sequences=True, name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
-        value_hidden_out = Bidirectional(LSTM(512, return_sequences=True, name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (value_hidden)
-        action_hidden =Bidirectional(LSTM(512, return_sequences=True,name = 'action_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
-        action_hidden_out = Bidirectional(LSTM(512, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 512)), merge_mode='sum') (action_hidden)
+    if 1==0:#args.bidir:
+        value_hidden =Bidirectional(LSTM(256, return_sequences=True, name = 'value_hidden', stateful=False, input_shape=(10, 512)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+        value_hidden_out = Bidirectional(LSTM(256, return_sequences=True, name = 'action_hidden_out', stateful=False, input_shape=(10, 256)), merge_mode='sum') (value_hidden)
+        action_hidden =Bidirectional(LSTM(256, return_sequences=True,name = 'action_hidden', stateful=False, input_shape=(10, 256)), merge_mode='sum') (hidden_input) #Dense(512, activation = 'relu', name = 'value_fc')(all_outs)
+        action_hidden_out = Bidirectional(LSTM(256, return_sequences=True,  name = 'action_hidden_out', stateful=False, input_shape=(10, 256)), merge_mode='sum') (action_hidden)
 
     else:
          value_hidden_out = LSTM(512, return_sequences=True, stateful=False, input_shape=(10, 512)) (hidden_input)
@@ -113,8 +113,8 @@ def build_network(input_shape, num_actions):
     context_value = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(1,))(sent_representation_vs)
     value = Dense(1, activation='linear', name='value')(context_value)
     context_policy = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(num_actions,))(sent_representation_policy)
-    con_policy =Dense(num_actions, activation='relu')(context_policy)
-    policy = Dense(num_actions, activation='softmax', name='policy')(con_policy)
+    policy =Dense(num_actions, activation='softmax')(context_policy)
+    #policy = Dense(num_actions, activation='softmax', name='policy')(con_policy)
 
 
     value_network = Model(input=input_data, output=value)
@@ -158,7 +158,7 @@ class LearningAgent(object):
 
         _, _, self.train_net, adventage = build_network(self.observation_shape, action_space.n)
 
-        self.train_net.compile(optimizer=Adam(lr=0.0001),#RMSprop(epsilon=0.1, rho=0.99),
+        self.train_net.compile(optimizer=RMSprop(epsilon=0.1, rho=0.99),
                                loss=[value_loss(), policy_loss(adventage, args.beta)])
 
         self.pol_loss = deque(maxlen=25)
@@ -190,16 +190,15 @@ class LearningAgent(object):
         self.val_loss.append(loss[1])
         self.entropy.append(entropy)
         self.values.append(np.mean(values))
-        min_val, max_val, avg_val = min(self.values), max(self.values), np.mean(self.values)
-        print('\rFrames: %8d; Policy-Loss: %10.6f; Avg: %10.6f '
-              '--- Value-Loss: %10.6f; Avg: %10.6f '
-              '--- Entropy: %7.6f; Avg: %7.6f '
-              '--- V-value; Min: %6.3f; Max: %6.3f; Avg: %6.3f' % (
-                  self.counter,
-                  loss[2], np.mean(self.pol_loss),
-                  loss[1], np.mean(self.val_loss),
-                  entropy, np.mean(self.entropy),
-                  min_val, max_val, avg_val), end='')
+#        print('\rFrames: %8d; Policy-Loss: %10.6f; Avg: %10.6f '
+#              '--- Value-Loss: %10.6f; Avg: %10.6f '
+#              '--- Entropy: %7.6f; Avg: %7.6f '
+#              '--- V-value; Min: %6.3f; Max: %6.3f; Avg: %6.3f' % (
+#                  self.counter,
+#                  loss[2], np.mean(self.pol_loss),
+#                  loss[1], np.mean(self.val_loss),
+#                  entropy, np.mean(self.entropy),
+#                  min_val, max_val, avg_val), end='')
         # -----
         self.swap_counter -= frames
         if self.swap_counter < 0:
@@ -255,6 +254,7 @@ def learn_proc(mem_queue, weight_dict):
             # -----
             save_counter -= 1
             if save_counter < 0:
+                print("test")
                 save_counter += save_freq
                 agent.train_net.save_weights('model-%s-%d.h5' % (args.game, agent.counter,), overwrite=True)
     except Exception as e:
@@ -269,9 +269,9 @@ class ActingAgent(object):
         self.past_range = 10
         self.observation_shape = (self.input_depth * self.past_range,) + self.screen
         self.value_net, self.policy_net, self.load_net, adv = build_network(self.observation_shape, action_space.n)
-        self.value_net.compile(optimizer=Adam(lr=0.0001), loss='mse')
-        self.policy_net.compile(optimizer=Adam(lr=0.0001), loss='categorical_crossentropy')
-        self.load_net.compile(optimizer=Adam(lr=0.0001), loss='mse', loss_weights=[0.5, 1.])  # dummy loss
+        self.value_net.compile(optimizer='rmsprop', loss='mse')
+        self.policy_net.compile(optimizer='rmsprop', loss='categorical_crossentropy')
+        self.load_net.compile(optimizer='rmsprop', loss='mse', loss_weights=[0.5, 1.])  # dummy loss
         self.action_space = action_space
         self.observations = np.zeros(self.observation_shape)
         self.last_observations = np.zeros_like(self.observations)
@@ -297,7 +297,7 @@ class ActingAgent(object):
 
     def sars_data(self, action, reward, observation, terminal, mem_queue):
         self.save_observation(observation)
-        reward = np.clip(reward, -1., 1.)
+        reward = np.clip(reward, -1., 4.)
         # reward /= args.reward_scale
         # -----
         self.n_step_observations.appendleft(self.last_observations)
@@ -339,6 +339,7 @@ def generate_experience_proc(mem_queue, weight_dict, no):
         frames = 0
         batch_size = args.batch_size
         # -----
+
         env = gym.make(args.game)
         agent = ActingAgent(env.action_space, n_step=args.n_step)
 
