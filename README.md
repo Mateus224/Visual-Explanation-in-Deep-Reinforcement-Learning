@@ -86,5 +86,5 @@ python3 dqn_atari.py --net_mode duel --ddqn --num_frames 10 --no_monitor --selec
 ```
 test:
 ```console
-python3 dqn_atari.py --net_mode duel --ddqn --num_frames 10 --recurrent --a_t --bidir --selector --task_name 'SpatialAt_DQN' --test --load_network --test --load_network_path=log/SeaquestDeterministic-v0-run6-SpatialAt_DQN/qnet7628.h5 --env 'SeaquestDeterministic-v0'
+python3 dqn_atari.py --net_mode duel_at_improved --ddqn --num_frames 10 --recurrent --a_t --bidir  --test --load_network --load_network_path 0_Best_4956.h5 --env 'Seaquest-v0' 
 ```
