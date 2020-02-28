@@ -62,7 +62,7 @@ python3 main.py --train_dqn --dueling True --ddqn True
 and you can test how the agent plays with:
 
 ```console
-python3 main.py --test_dqn --do_render --dueling True --ddqn True --test_dqn_model_path saved_dqn_networks/XXXX.h5
+python3 main.py --train_dqn --test_dqn --dueling True --visualize --ddqn True --test_dqn_model_path seqquest_dqn_5300000.h5 --env BreakoutNoFrameskip-v0
 ```
 
 
