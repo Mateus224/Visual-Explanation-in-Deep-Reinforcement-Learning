@@ -85,11 +85,11 @@ python3 main.py --train_dqn --test_dqn --dueling True --visualize --ddqn True --
 
 # Splitted Attention DRQN
 In this GIF you can see the different visualizations for the Splitted Attention DRQN algorithm Playing Seaquest-v0 with 10 frames:
-![](A3C/a3c_vanila/movies/450_breakout.gif)
+![](1.gif)
 
 # A3C
 In this GIF you can see the different visualizations for the A3C algorithm Playing Breakout-v0 with 3 frames:
-![](A3C/a3c_vanila/movies/450_breakout.gif)
+![](2.gif)
 
 # DDDQN
 Here we can see how the agent is looking more on his position (in the advantage part of the neuronal network [right figure] and how he is looking more on the reward in the value function part of the network [left figure].
