@@ -83,6 +83,10 @@ python3 main.py --train_dqn --test_dqn --dueling True --visualize --ddqn True --
 
 ## some results
 
+# Splitted Attention DRQN
+In this GIF you can see the different visualizations for the Splitted Attention DRQN algorithm Playing Seaquest-v0 with 10 frames:
+![](A3C/a3c_vanila/movies/450_breakout.gif)
+
 # A3C
 In this GIF you can see the different visualizations for the A3C algorithm Playing Breakout-v0 with 3 frames:
 ![](A3C/a3c_vanila/movies/450_breakout.gif)
