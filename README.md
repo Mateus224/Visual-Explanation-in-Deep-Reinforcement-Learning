@@ -84,18 +84,14 @@ python3 main.py --train_dqn --test_dqn --dueling True --visualize --ddqn True --
 
 ## some results
 
-# Splitted Attention DRQN
-In this GIF you can see the different visualizations for the Splitted Attention DRQN algorithm playing Seaquest-v0 with 10 frames. For the Grad-Cam methods in this video we use the second conv. layer:
-![](1.gif)
-
 # A3C
 In this GIF you can see the different visualizations for the A3C algorithm Playing Breakout-v0 with 3 frames. For the Grad-Cam methods in this video we use the first conv. layer::
 ![](2.gif)
 
-# DDDQN
-Here we can see how the agent is looking more on his position (in the advantage part of the neuronal network [right figure] and how he is looking more on the reward in the value function part of the network [left figure].
-(left value || right advantage)
-![Alt text](pictures/4.png?raw=true "example with environment")
+# Splitted Attention DRQN
+In this GIF you can see the different visualizations for the Splitted Attention DRQN algorithm playing Seaquest-v0 with 10 frames. For the Grad-Cam methods in this video we use the second conv. layer:
+![](1.gif)
+
 
 
 For Attention Networks:
