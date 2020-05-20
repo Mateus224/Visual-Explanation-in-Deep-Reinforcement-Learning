@@ -1,11 +1,9 @@
 ## Visual-Explanation-in-Deep-Reinforcement-Learning-through-Guided-Backpropagation-and-GradCam
 Deep Reinforcement Learning (DRL) connects the classic Reinforcement Learning algorithms with Convolutional Neural Networks (CNN). A problem in DRL is that CNNs are black-boxes and it is not easy to understand the decision-making process of agents. In order to be able to use the programs in highly dangerous environments for humans and machines, the developer needs a debugging tool to assure that the program does what is expected. Currently, the rewards are primarily used ever, this can lead to deceptive fallacies if policy and not learning to respond to the problem can be recognized with the help of to interpret how well an agent is learning. How the agent receives more rewards by memorizing a environment. In this work, it is shown that this visualization techniques.
 
-This work brings some of the best-known visualization methods from the field of image classifi-
-cation to the area of Deep Reinforcement Learning (DRL). Furthermore, two new visualization
+This work brings some of the best-known visualization methods from the field of image classification to the area of Deep Reinforcement Learning (DRL). Furthermore, two new visualization
 techniques have been developed, one of which provides particularly good results.
-It is being proven to what extent the algorithms can be used in the area of Reinforcement learn-
-ing. Also, the question arises on how well the different DRL algorithms can be visualized in
+It is being proven to what extent the algorithms can be used in the area of Reinforcement learning. Also, the question arises on how well the different DRL algorithms can be visualized in
 different environments from different visualization techniques.
 
 Among other things, the results of this work refute the claims made by Sam Greydanus et
@@ -18,14 +16,12 @@ However, since the results of the visualization techniques strongly depend on th
 neural network, one new architecture for off-policy algorithms was also developed in this work.
 The structure of the developed Networks surpasses the DDDQN and Attention DRQN Networks.
 
-Finally, a theoretical elaboration on the function and significance of bidirectional neural net-
-works for deep reinforcement learning was developed. It is known that long short-term memory
+Finally, a theoretical elaboration on the function and significance of bidirectional neural networks for deep reinforcement learning was developed. It is known that long short-term memory
 (LSTM) layers transport information like speed, acceleration, trajectories, etc. of features.
 Nonetheless, there is no elaboration on which information bi-directional networks transport in
 the area of deep reinforcement learning and how this information affects learning behaviour. If
 LSTM layers evaluate the current state based on past information, how can the bi-directional
-network evaluate the current state based on future information if this has not yet happened? Fur-
-thermore, this hypothesis claims why off-policy algorithms could behave similarly to on-policy
+network evaluate the current state based on future information if this has not yet happened? Furthermore, this hypothesis claims why off-policy algorithms could behave similarly to on-policy
 algorithms by bidirectional LSTM networks
 
 # Deep Reinfocement Learning Algorithms:
