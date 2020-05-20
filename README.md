@@ -52,7 +52,7 @@ algorithms by bidirectional LSTM networks
 I Introduce a new model of an off-policy network which performes better then the state of the art Attention DDDQN (In average this Splitted Attention DDQN Network is making over 9000 points in the game Seaquest-v0. DDDQN with Attation what I take as Basline the Network made 3-4000 in my tests in the published paper up to 6000 points). 
 This Network has in the input time distributed convolutional layers after that we splitt the layers into an advatage and a value stream. On the bottom of both we have bidriectional LSTM networks followed with an attention network. On the end we bring both streams together like in the dueling Network.
 
-![Alt text](splitted_attention_DDDQN/Master_Network/Attention-DQN_duel_visual_improved_02/model_plot.png)
+![Alt text](splitted_attention_DDDQN/Master_Network/model_plot.png)
 
 The Splitted Attention DRQN
 ![Alt text](result_spli_att_norm_lstm.png)
